@@ -56,7 +56,6 @@ function pf_filter(
         # * We thread over particles & separately over likelihoods
         # * This appears to be faster than threading once over particles
         timestamp = timeline[t]
-        timestamp = timeline[t]
         @threads for i in 1:np
             if isfinite(lw[i])
                 xnow[i], lwi = rmove(xpast[i], move, t, n_move)
