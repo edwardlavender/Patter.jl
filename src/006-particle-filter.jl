@@ -56,17 +56,24 @@ function pf_filter(
         # * We thread over particles & separately over likelihoods
         # * This appears to be faster than threading once over particles
         timestamp = timeline[t]
+        timestamp = timeline[t]
         @threads for i in 1:np
             if isfinite(lw[i])
                 xnow[i], lwi = rmove(xpast[i], move, t, n_move)
                 lw[i] += lwi
             end 
-            if haskey(yobs, timestamp) && isfinite(lw[i])
-                for (obs, model) in yobs[timestamp]
-                    lw[i] += log_prob_obs(xnow[i], model, t, obs)
+        end 
+
+        #### Update (log) weights
+        if haskey(yobs, timestamp)
+            @threads for (obs, model) in yobs[timestamp]
+                for i in 1:np
+                    if isfinite(lw[i])
+                        lw[i] += log_prob_obs(xnow[i], model, t, obs)
+                    end
                 end
             end
-        end 
+        end
 
         #### Record diagnostics
         maxlp[t] = maximum(lw)
