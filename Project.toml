@@ -1,0 +1,12 @@
+name = "Patter"
+uuid = "faabfbac-af09-47ee-bc95-5e336c516b5a"
+authors = ["edwardlavender <edward.lavender@eawag.ch>"]
+version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GeoArrays = "2fb1d81b-e6a0-5fc5-82e6-8e06903437ab"
+LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
