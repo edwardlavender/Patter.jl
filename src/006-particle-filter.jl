@@ -61,19 +61,12 @@ function pf_filter(
                 xnow[i], lwi = rmove(xpast[i], move, t, n_move)
                 lw[i] += lwi
             end 
-        end 
-
-        #### Update (log) weights
-        timestamp = timeline[t]
-        if haskey(yobs, timestamp)
-            @threads for (obs, model) in yobs[timestamp]
-                for i in 1:np
-                    if isfinite(lw[i])
-                        lw[i] += log_prob_obs(xnow[i], model, t, obs)
-                    end
+            if haskey(yobs, timestamp) && isfinite(lw[i])
+                for (obs, model) in yobs[timestamp]
+                    lw[i] += log_prob_obs(xnow[i], model, t, obs)
                 end
             end
-        end
+        end 
 
         #### Record diagnostics
         maxlp[t] = maximum(lw)
