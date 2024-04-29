@@ -68,7 +68,7 @@ function pf_filter(
             @threads for (obs, model) in yobs[timestamp]
                 for i in 1:np
                     if isfinite(lw[i])
-                        lw[i] += log_prob_obs(xnow[i], model, t, obs)
+                        lw[i] += logpdf_obs(xnow[i], model, t, obs)
                     end
                 end
             end
