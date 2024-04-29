@@ -1,11 +1,36 @@
 using Distributions
-using LogExpFunctions: log1pexp
+using LogExpFunctions: logistic
 
 export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticLogisStd
 export ModelObsDepthUniform, ModelObsDepthNormalTrunc, ModelObsDepthNormal
 
 abstract type ModelObs end
+
+
+#########################
+#########################
+#### Simulation and log probabilities 
+
+# * ModelObs is an abstract structure of model parameters for different data types
+# * dbn_obs() is a generic function with different methods that formulates a PDF for the input data type
+# * sim_obs() simulates observations from the PDF
+# * logpdf_obs() evaluates the PDF for an observation
+# * This code is clean (with less repetition) but slower than separate sim_obs() and log_pdf_obs() methods 
+# * (even though custom methods for acoustic likelihoods are still provided for improved speed, which help somewhat)
+# * TO DO - review
+
+# Simulate observations from a model 
+function sim_obs(state::State, model::ModelObs, t::Int64)
+    dbn = dbn_obs(state, model, t)
+    rand(dbn)
+end 
+
+# Calculate the log probability of observations given a model
+function logpdf_obs(state::State, model::ModelObs, t::Int64, obs)
+    dbn = dbn_obs(state, model, t)
+    logpdf(dbn, obs)
+end 
 
 
 #########################
@@ -22,7 +47,17 @@ struct ModelObsAcousticLogisTrunc <: ModelObs
     gamma::Float64
 end
 
-function log_prob_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
+function dbn_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64)
+    # Evaluate the distance between the particle and receiver
+    dist = distance(state.x, state.y, model.x, model.y)
+    # Define probability of detection
+    prob = ifelse(dist > model.gamma, 0.0, logistic(model.alpha + model.beta * dist))
+    # Define distribution
+    Bernoulli(prob)
+end
+
+# Specialised log_pdf function for ModelObsAcousticLogisTrunc (for improved speed)
+function logpdf_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
 
     # Evaluate the distance between the particle and receiver
     dist = distance(state.x, state.y, model.x, model.y)
@@ -54,7 +89,7 @@ end
 #########################
 #### Standard logistic acoustic observation model parameters
 
-struct ModelObsAcousticLogisStd
+struct ModelObsAcousticLogisStd <: ModelObs
        # Receiver coordinates
        x::Float64
        y::Float64
@@ -63,7 +98,17 @@ struct ModelObsAcousticLogisStd
        k::Float64    
 end 
 
-function log_prob_obs(state::State, model::ModelObsAcousticLogisStd, t::Int64, obs::Int64)
+function dbn_obs(state::State, model::ModelObsAcousticLogisStd, t::Int64)
+    # Evaluate the distance between the particle and receiver
+    dist = distance(state.x, state.y, model.x, model.y)
+    # Define probability of detection
+    prob = logistic((model.d50 - dist) / model.k)
+     # Define distribution
+    Bernoulli(prob)
+end 
+
+# Specialised logpdf_obs function for ModelObsAcousticLogisStd (for improved speed)
+function logpdf_obs(state::State, model::ModelObsAcousticLogisStd, t::Int64, obs::Int64)
 
     # Evaluate the distance between the particle and receiver
     dist = distance(state.x, state.y, model.x, model.y)
@@ -100,14 +145,11 @@ struct ModelObsDepthUniform{T} <: ModelObs
     depth_deep_eps::Float64
 end
 
-function log_prob_obs(state::State, model::ModelObsDepthUniform, t::Int64, obs::Float64)
+function dbn_obs(state::State, model::ModelObsDepthUniform, t::Int64)
     z_env = extract(model.env, state.x, state.y)
-    if isnan(z_env) 
-        return -Inf 
-    end 
     a = max(0, z_env - model.depth_shallow_eps)
     b = z_env + model.depth_deep_eps
-    logpdf(Uniform(a, b), obs)
+    Uniform(a, b)
 end 
 
 
@@ -127,13 +169,10 @@ end
 # * The probability is highest if the individual is on the seabed
 # * The individual can be up to model.deep_depth_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
-function log_prob_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64,  obs::Float64)
+function dbn_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64)
     z_env = extract(model.env, state.x, state.y)
-    if isnan(z_env) 
-        return -Inf 
-    end 
-    logpdf(truncated(Normal(z_env, model.sigma), 
-                     0.0, z_env + model.deep_depth_eps), obs)
+    truncated(Normal(z_env, model.sigma), 
+                     0.0, z_env + model.deep_depth_eps)
 end 
 
 
@@ -148,6 +187,6 @@ struct ModelObsDepthNormal <: ModelObs
 end
 
 # Normal depth model log probability 
-function log_prob_obs(state::StateXYZD, model::ModelObsDepthNormal, t::Int64, obs::Float64)
-    logpdf(Normal(state.z, model.sigma), obs)
+function dbn_obs(state::StateXYZD, model::ModelObsDepthNormal, t::Int64)
+    Normal(state.z, model.sigma)
 end 
