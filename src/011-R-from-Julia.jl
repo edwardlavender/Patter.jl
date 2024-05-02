@@ -36,12 +36,12 @@ end
 # Define state matrix: 
 # * Two rows: two particles
 # * Three columns: three time steps 
-# state = [StateXY(1.0, 2.0)  StateXY(3.0, 4.0)  StateXY(5.0, 6.0);
-# StateXY(7.0, 8.0) StateXY(9.0, 10.0)    StateXY(11.0, 2.0)]
+# state = [StateXY(0.0, 1.0, 2.0)  StateXY(0.0, 3.0, 4.0)  StateXY(0.0, 5.0, 6.0);
+# StateXY(0.0, 7.0, 8.0) StateXY(0.0, 9.0, 10.0)    StateXY(0.0, 11.0, 2.0)]
 # r_get_states(state)
 
 # Create a big matrix of StateXY objects
 # np = 1000
 # nt = 20000
-# state = [StateXY(rand(), rand()) for _ in 1:np, _ in 1:nt]
+# state = [StateXY(rand(), rand(), rand()) for _ in 1:np, _ in 1:nt]
 # r_get_states(state)
