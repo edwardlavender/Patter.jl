@@ -1,8 +1,17 @@
 using DataFrames
 
-# Get state values from a State matrix > DataFrame
-# (rows: particles, columns: time)
-function rget_state_df(state::Matrix)
+"""
+# R from Julia
+
+A collection of functions that facilitate the translation of inputs from `Julia` into `R`. 
+
+# Details
+* [`r_get_states`] translates a State matrix into a `DataFrame` that can be passed to `R`. In the input matrix, each row is a particle and each column is a time step. 
+
+# Returns 
+A long-format `DataFrame`, with columns for `path_id`, `timestep` and each state dimension.
+"""
+function r_get_states(state::Matrix)
     # Initialise empty matrix
     fields = fieldnames(typeof(state[1]))
     values = Matrix{Float64}(undef, prod(size(state)), length(fields) + 2)
@@ -29,10 +38,10 @@ end
 # * Three columns: three time steps 
 # state = [StateXY(1.0, 2.0)  StateXY(3.0, 4.0)  StateXY(5.0, 6.0);
 # StateXY(7.0, 8.0) StateXY(9.0, 10.0)    StateXY(11.0, 2.0)]
-# rget_state_df(state)
+# r_get_states(state)
 
 # Create a big matrix of StateXY objects
 # np = 1000
 # nt = 20000
 # state = [StateXY(rand(), rand()) for _ in 1:np, _ in 1:nt]
-# @time rget_state_df(state)
+# r_get_states(state)

@@ -5,32 +5,39 @@ export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticLogisStd
 export ModelObsDepthUniform, ModelObsDepthNormalTrunc, ModelObsDepthNormal
 
+
+"""
+    Observation models
+
+# Structures
+
+`ModelObs` is an abstract type used to hold parameters for observation models. 
+
+`ModelObsAcousticLogisTrunc` is a `ModelObs` structure for an acoustic observation and a truncated logistic detection probability model:
+        
+- `x`, `y`: The coordinates of the receiver;
+- `alpha`, `beta`, `gamma`: The parameters of a logistic detection probability model;
+
+`ModelObsDepthUniform` is `ModelObs` structure for a depth observation and a uniform depth model, in which we assume the individual must be located in an envelope around the bathymetry depth, defined by two error terms:
+
+- `depth_shallow_eps`
+- `depth_deep_eps`
+
+`ModelObsDepthNormalTrunc` is a `ModelObs` structure for a depth observation and a truncated normal model, in which we assume the likelihood of a depth observation given by a normal distribution centred at the bathymetric depth in a location and defined by the parameters:
+
+- `sigma`: The standard deviation of the normal distribution;
+- `deep_depth_eps`: The deep truncation parameter;
+
+# Simulation
+
+`simulate_obs()` is a generic function that simulates observations from a `ModelObs` instance. 
+
+# Density 
+
+`logpdf_obs()` is a generic function that calculates the log probability (density) of an observation, given the animal's `state` and a `ModelObs` instance.
+        
+"""
 abstract type ModelObs end
-
-
-#########################
-#########################
-#### Simulation and log probabilities 
-
-# * ModelObs is an abstract structure of model parameters for different data types
-# * dbn_obs() is a generic function with different methods that formulates a PDF for the input data type
-# * sim_obs() simulates observations from the PDF
-# * logpdf_obs() evaluates the PDF for an observation
-# * This code is clean (with less repetition) but slower than separate sim_obs() and log_pdf_obs() methods 
-# * (even though custom methods for acoustic likelihoods are still provided for improved speed, which help somewhat)
-# * TO DO - review
-
-# Simulate observations from a model 
-function sim_obs(state::State, model::ModelObs, t::Int64)
-    dbn = dbn_obs(state, model, t)
-    rand(dbn)
-end 
-
-# Calculate the log probability of observations given a model
-function logpdf_obs(state::State, model::ModelObs, t::Int64, obs)
-    dbn = dbn_obs(state, model, t)
-    logpdf(dbn, obs)
-end 
 
 
 #########################
@@ -46,17 +53,18 @@ struct ModelObsAcousticLogisTrunc <: ModelObs
     beta::Float64    
     gamma::Float64
 end
+@doc (@doc ModelObs) ModelObsAcousticLogisTrunc
 
-function dbn_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64)
+function simulate_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64)
     # Evaluate the distance between the particle and receiver
     dist = distance(state.x, state.y, model.x, model.y)
     # Define probability of detection
     prob = ifelse(dist > model.gamma, 0.0, logistic(model.alpha + model.beta * dist))
     # Define distribution
-    Bernoulli(prob)
+    rand(Bernoulli(prob))
 end
+@doc (@doc ModelObs) simulate_obs
 
-# Specialised log_pdf function for ModelObsAcousticLogisTrunc (for improved speed)
 function logpdf_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
 
     # Evaluate the distance between the particle and receiver
@@ -83,53 +91,7 @@ function logpdf_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, o
     end
 
 end
-
-
-#########################
-#########################
-#### Standard logistic acoustic observation model parameters
-
-struct ModelObsAcousticLogisStd <: ModelObs
-       # Receiver coordinates
-       x::Float64
-       y::Float64
-       # Detection probability parameters
-       d50::Float64
-       k::Float64    
-end 
-
-function dbn_obs(state::State, model::ModelObsAcousticLogisStd, t::Int64)
-    # Evaluate the distance between the particle and receiver
-    dist = distance(state.x, state.y, model.x, model.y)
-    # Define probability of detection
-    prob = logistic((model.d50 - dist) / model.k)
-     # Define distribution
-    Bernoulli(prob)
-end 
-
-# Specialised logpdf_obs function for ModelObsAcousticLogisStd (for improved speed)
-function logpdf_obs(state::State, model::ModelObsAcousticLogisStd, t::Int64, obs::Int64)
-
-    # Evaluate the distance between the particle and receiver
-    dist = distance(state.x, state.y, model.x, model.y)
-
-    # Calculate log probability given detection (1)
-    if obs == 1
-        return -log1pexp(-(model.d50 - dist) / model.k)
-    
-    # Calculate log probability given non detection (0)
-    elseif obs == 0
-        if dist > 15 * model.k + model.d50
-            return zero(Float64)
-        else 
-            return -log1pexp((model.d50 - dist) / model.k)
-        end
-
-    else 
-      error("Acoustic observations should be coded as 0 or 1.")  
-    end
-
-end
+@doc (@doc ModelObs) logpdf_obs
 
 
 #########################
@@ -144,12 +106,22 @@ struct ModelObsDepthUniform{T} <: ModelObs
     depth_shallow_eps::Float64
     depth_deep_eps::Float64
 end
+@doc (@doc ModelObs) ModelObsDepthUniform
 
-function dbn_obs(state::State, model::ModelObsDepthUniform, t::Int64)
+function simulate_obs(state::State, model::ModelObsDepthUniform, t::Int64)
     z_env = extract(model.env, state.x, state.y)
-    a = max(0, z_env - model.depth_shallow_eps)
-    b = z_env + model.depth_deep_eps
-    Uniform(a, b)
+    a     = max(0, z_env - model.depth_shallow_eps)
+    b     = z_env + model.depth_deep_eps
+    dbn   = Uniform(a, b)
+    rand(dbn)
+end 
+
+function logpdf_obs(state::State, model::ModelObsDepthUniform, t::Int64, obs::Float64)
+    z_env = extract(model.env, state.x, state.y)
+    a     = max(0, z_env - model.depth_shallow_eps)
+    b     = z_env + model.depth_deep_eps
+    dbn   = Uniform(a, b)
+    logpdf(dbn, obs)
 end 
 
 
@@ -164,29 +136,22 @@ struct ModelObsDepthNormalTrunc{T} <: ModelObs
     # The individual may be `deep_depth_eps` deeper than the bathymetric depth
     deep_depth_eps::Float64
 end 
+@doc (@doc ModelObs) ModelObsDepthNormalTrunc
 
 # Truncated normal depth model log probability 
 # * The probability is highest if the individual is on the seabed
 # * The individual can be up to model.deep_depth_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
-function dbn_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64)
+function simulate_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64)
     z_env = extract(model.env, state.x, state.y)
-    truncated(Normal(z_env, model.sigma), 
-                     0.0, z_env + model.deep_depth_eps)
+    dbn   = truncated(Normal(z_env, model.sigma), 
+                      0.0, z_env + model.deep_depth_eps)
+    rand(dbn)
 end 
 
-
-#########################
-#########################
-#### Normal depth model
-
-# Normal depth model 
-struct ModelObsDepthNormal <: ModelObs
-    # Normal distribution variance
-    sigma::Float64
-end
-
-# Normal depth model log probability 
-function dbn_obs(state::StateXYZD, model::ModelObsDepthNormal, t::Int64)
-    Normal(state.z, model.sigma)
+function logpdf_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64, obs::Float64)
+    z_env = extract(model.env, state.x, state.y)
+    dbn   = truncated(Normal(z_env, model.sigma), 
+                      0.0, z_env + model.deep_depth_eps)
+    logpdf(dbn, obs)
 end 

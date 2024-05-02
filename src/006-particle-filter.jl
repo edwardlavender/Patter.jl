@@ -5,13 +5,36 @@ using ProgressMeter: @showprogress
 
 export pf_filter
 
-# Particle filter
-function pf_filter(
+"""
+# Particle filter 
+
+A particle filtering algorithm that samples from f(X_t | {Y_1 ... Y_t}) for t ∈ 1:Tmax.
+
+# Arguments:
+
+- `timeline`: A Vector{DateTime} of time stamps that defines the time steps for the simulation. Time stamps must be equally spaced. 
+- `xinit`: A Vector{State} that defines the initial state(s) of the animal.
+- `yobs`: A Dictionary of observations.
+- `move`: A `ModelMove` instance.
+- `n_move`: An integer that defines the number of attempts used to find a legal move. Particles are killed otherwise. 
+- `n_record`: An integer that defines the number of particles to record at each time step.
+- `resample_ess`: A number that defines the effective sample size at which to resampler particles.
+
+# Returns
+A tuple with the following fields:
+- `timeline`
+- `state`
+- `ess`
+- `maxlp`
+- `convergence`
+
+"""
+function particle_filter(
     ; timeline::Vector{DateTime}, 
     xinit::Vector,
     yobs::Dict,
     move::ModelMove, 
-    n_move::Int = 1000,
+    n_move::Int = 100_000,
     n_record::Int = 1000,
     resample_ess::Int = n_record * 0.5) 
 
@@ -58,7 +81,7 @@ function pf_filter(
         timestamp = timeline[t]
         @threads for i in 1:np
             if isfinite(lw[i])
-                xnow[i], lwi = rmove(xpast[i], move, t, n_move)
+                xnow[i], lwi = simulate_move(xpast[i], move, t, n_move)
                 lw[i] += lwi
             end 
         end 
@@ -88,7 +111,7 @@ function pf_filter(
         # Evaluate ESS   
         ess[t] = exp(-logsumexp(2 * lw_norm))
         # Compute resampling indices
-        idx = pf_resample_lv(exp.(lw_norm), np)
+        idx = resample(exp.(lw_norm), np)
         # Record (subset) of resampled particles
         # (A deep copy is implicitly made here via the subsetting)
         xout[:, t] .= xnow[idx[1:nr]]

@@ -1,9 +1,25 @@
-import Random
+using Random
 
-export pf_init
+"""
+    # Systematic resampling algorithm
+    
+    Given the weight vector w, resample a set of *indices* based on low-variance resampling algorithm from Thrun, Burgard, and Fox's "Probabilistic Robotics".
+    
+    # Source 
 
-# Low variance resampling algorithm 
-function pf_resample_lv(w::Vector{Float64}, n::Int = length(w))
+    Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
+    
+    # Example
+    
+    ```Julia
+    X = ["A", "B", "C", "D"]
+    w = [0, 0, 0.75, 0.25]
+
+    idx = resample(w, 12)
+    X[idx]
+    ```
+    """
+function resample(w::Vector{Float64}, n::Int = length(w))
     w = w ./ sum(w)
     idx = zeros(Int, n)
     r = rand() * 1/n
@@ -22,31 +38,3 @@ function pf_resample_lv(w::Vector{Float64}, n::Int = length(w))
     Random.shuffle!(idx)
     idx
 end
-
-# Initial particles 
-function pf_init(state::Vector, model::ModelMove, n::Int, xlim = nothing, ylim = nothing)
-
-    # (optional) Define xlim and ylim
-    env = model.env
-    bb = GeoArrays.bbox(env)
-    if isnothing(xlim)
-        xlim = (bb.min_x, bb.max_x)
-    end
-    if isnothing(ylim)
-        ylim = (bb.min_y, bb.max_y)
-    end
-    
-    # Sample within limits
-    # * We assume that there are at least some valid locations within xlim & ylim
-    xinit = state
-    while length(xinit) < n
-        pinit = rinit(state, model, xlim, ylim)
-        valid = is_valid(model.env, pinit.x, pinit.y)
-        if valid
-            push!(xinit, pinit)
-        end 
-    end
-    
-    xinit
-
-    end
