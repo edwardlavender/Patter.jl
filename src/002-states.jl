@@ -13,15 +13,16 @@ export State, StateXY, StateXYZ, StateXYZD
 
 # Fields
 
--   `x`, `y`:  The animal's x and y coordinates, required for all `States`;
--   `z`: The animal's z coordinate, required for 3D states;
+-   `map_value`: The value of the map at coordinates (x, y), required for All `State`s;
+-   `x`, `y`:  The animal's x and y coordinates, required for all `State`s;
+-   `z`: The animal's z coordinate, required for 3D `State`s;
 -   `angle`: The turning angle, required by `StateXYZD`;
 
 # Details
 
--   All states must include `x` and `y` fields;
--   For >= 3D states, the depth dimension must be named `z` (for [`rmove()`](@ref));
--   For `R` users, all fields must be of type `Float64` for [`rget_state_df()`](@ref) to parse state vectors;
+-   All states must include `x`, `y` and `map_value` fields;
+-   For >= 3D states, the depth dimension must be named `z` (for [`simulate_move()`](@ref));
+-   For `R` users, all fields must be of type `Float64` for [`r_get_states()`](@ref) to parse state vectors;
 
 # Examples
 ```jldoctest
@@ -33,6 +34,8 @@ abstract type State end
 
 # 2D states (2D random walk)
 struct StateXY <: State
+    # Map value
+    map_value::Float64
     # Coordinates
     x::Float64
     y::Float64
@@ -41,6 +44,8 @@ end
 
 # 3D states (3D random walk)
 struct StateXYZ <: State
+    # Map value
+    map_value::Float64   
     # Coordinates 
     x::Float64
     y::Float64
@@ -50,6 +55,8 @@ end
 
 # 4D states (2D CRW and RW in z)
 struct StateXYZD <: State
+    # Map value
+    map_value::Float64   
     # Coordinates 
     x::Float64
     y::Float64
@@ -59,5 +66,19 @@ struct StateXYZD <: State
 end 
 @doc (@doc State) StateXYZD
 
-# TO DO
-# * Include map_value as the first element of every State and benchmark
+
+"""
+    state_is_valid(state::State, zdim::Bool)
+
+Determine whether or not a `state` is valid.
+
+See also [`State`](@ref), [`is_valid()`](@ref), 
+"""
+function state_is_valid(state::State, zdim::Bool)
+    if zdim
+        return is_valid(state.map_value, state.z)
+    else 
+        return is_valid(state.map_value) 
+    end 
+end 
+

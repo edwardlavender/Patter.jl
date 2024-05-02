@@ -98,28 +98,22 @@ end
 #########################
 #### Uniform depth model 
 
-# TO DO
-# * Review the inclusion of the env dataset here as well
-
-struct ModelObsDepthUniform{T} <: ModelObs
-    env::T
+struct ModelObsDepthUniform <: ModelObs
     depth_shallow_eps::Float64
     depth_deep_eps::Float64
 end
 @doc (@doc ModelObs) ModelObsDepthUniform
 
 function simulate_obs(state::State, model::ModelObsDepthUniform, t::Int64)
-    z_env = extract(model.env, state.x, state.y)
-    a     = max(0, z_env - model.depth_shallow_eps)
-    b     = z_env + model.depth_deep_eps
+    a     = max(0, state.map_value - model.depth_shallow_eps)
+    b     = state.map_value + model.depth_deep_eps
     dbn   = Uniform(a, b)
     rand(dbn)
 end 
 
 function logpdf_obs(state::State, model::ModelObsDepthUniform, t::Int64, obs::Float64)
-    z_env = extract(model.env, state.x, state.y)
-    a     = max(0, z_env - model.depth_shallow_eps)
-    b     = z_env + model.depth_deep_eps
+    a     = max(0, state.map_value - model.depth_shallow_eps)
+    b     = state.map_value + model.depth_deep_eps
     dbn   = Uniform(a, b)
     logpdf(dbn, obs)
 end 
@@ -129,8 +123,7 @@ end
 #########################
 #### Truncated normal depth model
 
-struct ModelObsDepthNormalTrunc{T} <: ModelObs 
-    env::T
+struct ModelObsDepthNormalTrunc <: ModelObs 
     # Normal distribution variance
     sigma::Float64
     # The individual may be `deep_depth_eps` deeper than the bathymetric depth
@@ -143,15 +136,13 @@ end
 # * The individual can be up to model.deep_depth_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
 function simulate_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64)
-    z_env = extract(model.env, state.x, state.y)
-    dbn   = truncated(Normal(z_env, model.sigma), 
-                      0.0, z_env + model.deep_depth_eps)
+    dbn   = truncated(Normal(state.map_value, model.sigma), 
+                      0.0, state.map_value + model.deep_depth_eps)
     rand(dbn)
 end 
 
 function logpdf_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64, obs::Float64)
-    z_env = extract(model.env, state.x, state.y)
-    dbn   = truncated(Normal(z_env, model.sigma), 
-                      0.0, z_env + model.deep_depth_eps)
+    dbn   = truncated(Normal(state.map_value, model.sigma), 
+                      0.0, state.map_value + model.deep_depth_eps)
     logpdf(dbn, obs)
 end 

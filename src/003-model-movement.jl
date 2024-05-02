@@ -5,13 +5,6 @@
 export ModelMove, ModelMoveXY, ModelMoveXYZD
 export simulate_states_init
 
-# ModelMove structures define the parameters of the movement model
-# * All ModelMove structures must contain an `env` field that defines the arena within which movement occurs 
-# * By default, `env` is assumed to be a GeoArray but a shapefile can be used with a custom extract() method (see spatial.jl)
-# * Users can use a provided structure or write their own
-# * For custom ModelMoves, new rstep() methods are required
-
-
 """
     Movement models 
 
@@ -25,7 +18,7 @@ export simulate_states_init
 
 # Fields
 
--   `env`: A field field that defines the arena within which movement occurs. This is required by all movement models;
+-   `map`: A field that defines the arena within which movement occurs. This is required by all movement models;
 -   `dbn_length`: The distribution of step lengths;
 -   `dbn_angle`: The distribution of turning angles;
 -   `dbn_angle_delta`: The distribution of changes in turning angle;
@@ -34,8 +27,8 @@ export simulate_states_init
 # Details
 
 -   ModelMove structures define the parameters of the movement model;
--   All ModelMove structures must contain an `env` field. 
--   By default, `env` is assumed to be a GeoArray but a shapefile can be used with a custom [`extract()`](@ref) method;
+-   All ModelMove structures must contain an `map` field. 
+-   By default, `map` is assumed to be a GeoArray but a shapefile can be used with a custom [`extract()`](@ref) method;
 -   Users can use a provided structure or write their own;
 -   For custom ModelMoves, new rstep() methods are required;
 """
@@ -44,7 +37,7 @@ abstract type ModelMove end
 # Random walk in X and Y
 struct ModelMoveXY{T, U, V} <: ModelMove
     # Environment
-    env::T
+    map::T
     # Distribution of step lengths
     dbn_length::U
     # Distribution of turning angles
@@ -54,12 +47,12 @@ end
 
 # Random walk in X, Y and Z
 # * TO DO
-@doc (@doc ModelMove) ModelMoveXYZ
+# @doc (@doc ModelMove) ModelMoveXYZ
 
 # Correlated random walk in X, Y and random walk in Z
 struct ModelMoveXYZD{T, U, V, X} <: ModelMove
     # Environment
-    env::T
+    map::T
     # Step length
     dbn_length::U 
     # Change in turning angle
@@ -84,27 +77,29 @@ This function is wrapped by the exported function [`simulate_states_init()`](@re
 
 # Arguments:
 -   `state_type`: An empty `State` subtype, such as `StateXY`, used for method dispatch only;
--   `move`: A `MoveModel` instance;
+-   `model`: A `MoveModel` instance;
 -   `xlim`, `ylim`: Pairs of numbers that define the boundaries of the area within which `x` and `y` state values are sampled;
 
 """
 function simulate_state_init end 
 
-function simulate_state_init(state::Type{StateXY}, model::ModelMove, xlim, ylim)
+function simulate_state_init(state_type::Type{StateXY}, model::ModelMove, xlim, ylim)
     x = rand() * (xlim[2] - xlim[1]) + xlim[1]
     y = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    StateXY(x, y)
+    map_value = extract(model.map, x, y)
+    StateXY(map_value, x, y)
 end
 
 # function simulate_state_init(state_type::Type{StateXYZ})
 # * TO DO
 
-function simulate_state_init(state::Type{StateXYZD}, model::ModelMove, xlim, ylim)
-    x     = rand() * (xlim[2] - xlim[1]) + xlim[1]
-    y     = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    z     = rand() * extract(model.env, x, y)
-    angle = rand() * 2 * pi
-    StateXYZD(x, y, z, angle)
+function simulate_state_init(state_type::Type{StateXYZD}, model::ModelMove, xlim, ylim)
+    x         = rand() * (xlim[2] - xlim[1]) + xlim[1]
+    y         = rand() * (ylim[2] - ylim[1]) + ylim[1]
+    map_value = extract(model.map, x, y)
+    z         = rand() * map_value
+    angle     = rand() * 2 * pi
+    StateXYZD(map_value, x, y, z, angle)
 end 
 
 """
@@ -122,8 +117,7 @@ Simulate a vector of initial states for the simulation of movement paths and the
 function simulate_states_init(state_type, model::ModelMove, n::Int, xlim = nothing, ylim = nothing)
 
     # (optional) Define xlim and ylim
-    env = model.env
-    bb = GeoArrays.bbox(env)
+    bb = GeoArrays.bbox(model.map)
     if isnothing(xlim)
         xlim = (bb.min_x, bb.max_x)
     end
@@ -134,9 +128,10 @@ function simulate_states_init(state_type, model::ModelMove, n::Int, xlim = nothi
     # Sample within limits
     # * We assume that there are at least some valid locations within xlim & ylim
     xinit = state_type[]
+    zdim  = hasfield(state_type, :z)
     while length(xinit) < n
         pinit = simulate_state_init(state_type, model, xlim, ylim)
-        valid = is_valid(model.env, pinit.x, pinit.y)
+        valid = state_is_valid(pinit, zdim)
         if valid
             push!(xinit, pinit)
         end 
@@ -170,11 +165,12 @@ Simulate a (tentative) step from one location (`State`) into a new location (`St
 
 # RW in X and Y
 function simulate_step(state::StateXY, model::ModelMoveXY, t::Int64)
-    length = rand(model.dbn_length)
-    angle  = rand(model.dbn_angle)
-    x      = state.x + length * cos(angle)
-    y      = state.y + length * sin(angle)
-    StateXY(x, y)
+    length    = rand(model.dbn_length)
+    angle     = rand(model.dbn_angle)
+    x         = state.x + length * cos(angle)
+    y         = state.y + length * sin(angle)
+    map_value = extract(model.map, x, y)
+    StateXY(map_value, x, y)
 end 
 
 # RW in X, Y and z
@@ -187,7 +183,8 @@ function simulate_step(state::StateXYZD, model::ModelMoveXYZD, t::Int64)
     x      = state.x + length * cos(angle)
     y      = state.y + length * sin(angle)
     z      = state.z + rand(model.dbn_z_delta)
-    StateXYZD(x, y, z, angle)
+    map_value = extract(model.map, x, y)
+    StateXYZD(map_value, x, y, z, angle)
 end 
 
 
@@ -210,11 +207,7 @@ function simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real =
         # Simulate a new state
         pstate = simulate_step(state, model, t)
         # Identify proposal validity 
-        if zdim
-            valid = is_valid(model.env, pstate.x, pstate.y, pstate.z)
-        else 
-            valid = is_valid(model.env, pstate.x, pstate.y)
-        end 
+        valid = state_is_valid(pstate, zdim)
         # Return valid proposals and the (log) weight (log(1))
         if valid
             return pstate, 0.0
