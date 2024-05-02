@@ -1,4 +1,4 @@
-import GeoArrays
+using GeoArrays
 
 export extract
 

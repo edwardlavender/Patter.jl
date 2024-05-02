@@ -1,5 +1,5 @@
 using Distributions
-using LogExpFunctions: logistic
+using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticLogisStd
