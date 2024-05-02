@@ -32,6 +32,10 @@ StateXY(0.0, 0.0)
 """
 abstract type State end 
 
+# State subtypes:
+# * map_value, x, y are essential (see documentation)
+# * This is much faster & facilitates the implementation of the depth observation models
+
 # 2D states (2D random walk)
 struct StateXY <: State
     # Map value
