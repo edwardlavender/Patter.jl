@@ -9,7 +9,8 @@ A collection of functions that facilitate the translation of inputs from R into 
 
 # Details
 
-* [`julia_get_xinit()`] gets a vector of initial States from a DataFrame;
+* [`julia_get_xinit()`] gets a Vector of initial States from a DataFrame;
+* [`julia_get_models()`] gets a Vector of `ModelObs` subtypes from a Vector of Strings;
 
 """
 function julia_get end 
@@ -29,3 +30,11 @@ end
 
 # d = DataFrame(map_value = [0, 1], x = [1, 2], y = [3, 4])
 # julia_get_xinit(StateXY, d)
+
+
+function julia_get_models(models::Vector{String})
+    [eval(Symbol(model)) for model in models]
+end
+
+# julia_get_models(["ModelObsAcousticLogisTrunc"])
+# julia_get_models(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"])
