@@ -55,11 +55,7 @@ function dict_obs(timestamp, obs, sensor, model_type::Type{<: ModelObs})
 end 
 # Specialised function for depth observations
 function dict_obs(timestamp, obs, sensor, model_type::Type{ModelObsAcousticLogisTrunc})
-    if obs == 1
-        Dict("timestamp" => timestamp, "receiver_x" => sensor.x, "receiver_y" => sensor.y, "detection" => obs)
-    else
-        Dict() 
-    end 
+    Dict("timestamp" => timestamp, "receiver_x" => sensor.x, "receiver_y" => sensor.y, "detection" => obs)
 end 
 # Specialised function for acoustic observations 
 function dict_obs(timestamp, obs, sensor, model_type::Union{Type{ModelObsDepthUniform}, Type{ModelObsDepthNormalTrunc}})
