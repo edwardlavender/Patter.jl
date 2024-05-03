@@ -77,7 +77,7 @@ function particle_filter(
     move::ModelMove,
     n_move::Int = 100_000,
     n_record::Int = 1000,
-    resample_ess::Int = n_record * 0.5)
+    resample_ess::Int = round(Int, n_record * 0.5))
 
     #### Define essential parameters
     # Number of time steps
