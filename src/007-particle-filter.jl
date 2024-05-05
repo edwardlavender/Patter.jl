@@ -59,7 +59,7 @@ A particle filtering algorithm that samples from f(X_t | {Y_1 ... Y_t}) for t âˆ
 - `move`: A `ModelMove` instance.
 - `n_move`: An integer that defines the number of attempts used to find a legal move. Particles are killed otherwise.
 - `n_record`: An integer that defines the number of particles to record at each time step.
-- `n_resample`: An integer that defines the effective sample size at which to resample particles.
+- `n_resample`: A number that defines the effective sample size at which to resample particles.
 
 # Returns
 A tuple with the following fields:
@@ -77,7 +77,7 @@ function particle_filter(
     move::ModelMove,
     n_move::Int = 100_000,
     n_record::Int = 1000,
-    n_resample::Int = round(Int, n_record * 0.5))
+    n_resample::Float64 = n_record * 0.5)
 
     #### Define essential parameters
     # Number of time steps
@@ -157,7 +157,7 @@ function particle_filter(
         # (A deep copy is implicitly made here via the subsetting)
         xout[:, t] .= xnow[idx[1:nr]]
         # Optionally resample particles for next iteration
-        if ess[t] <= resample_ess
+        if ess[t] <= n_resample
             xpast .= xnow[idx]
             lw .= zero(Float64)
         else
