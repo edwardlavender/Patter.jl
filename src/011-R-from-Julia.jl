@@ -49,17 +49,8 @@ end
 
 
 #### Formulate dictionaries to hold the observation for a selected time stamp
-# Generic function (for user-specified types)
-function dict_obs(timestamp, obs, sensor, model_type::Type{<: ModelObs})
-    Dict("timestamp" => timestamp, "observation" >= obs)
-end 
-# Specialised function for depth observations
-function dict_obs(timestamp, obs, sensor, model_type::Type{ModelObsAcousticLogisTrunc})
-    Dict("timestamp" => timestamp, "receiver_x" => sensor.x, "receiver_y" => sensor.y, "detection" => obs)
-end 
-# Specialised function for acoustic observations 
-function dict_obs(timestamp, obs, sensor, model_type::Union{Type{ModelObsDepthUniform}, Type{ModelObsDepthNormalTrunc}})
-    Dict("timestamp" => timestamp, "depth" => obs)
+function dict_obs(timestamp, obs, sensor)
+    Dict("timestamp" => timestamp, "obs" >= obs, sensor...)
 end 
 
 #### Extract dataset(s) from yobs for a selected model type
@@ -78,7 +69,7 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
         for (timestamp, observations) in yobs[key]
             for (obs, sensor) in observations
                 if sensor isa model_type
-                    push!(dicts, dict_obs(timestamp, obs, sensor, model_type))
+                    push!(dicts, dict_obs(timestamp, obs, sensor))
                 end
             end 
         end
