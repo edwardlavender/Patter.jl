@@ -68,7 +68,7 @@ function assemble_yobs(datasets::Vector, model_types::Vector{DataType})
     for (dataset, model_type) in zip(datasets, model_types)
     
         # Define dataset parameters and ModelObs subtype
-        parameters      = select(dataset, Not([:timestamp, :sensor_id, :obs]))
+        parameters      = select(dataset, Not([:timestamp, :obs]))
         # strings         = any(col -> isa(first(col), String), eachcol(dataset))
     
         # Iterate over time steps & add observations & ModelObs objects
