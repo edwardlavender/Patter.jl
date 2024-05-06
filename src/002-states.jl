@@ -21,13 +21,8 @@ export State, StateXY, StateXYZ, StateXYZD
 # Details
 
 -   All states must include `x`, `y` and `map_value` fields;
--   For >= 3D states, the depth dimension must be named `z` (for [`simulate_move()`](@ref));
--   For `R` users, all fields must be of type `Float64` for [`r_get_states()`](@ref) to parse state vectors;
-
-# Examples
-```jldoctest
-julia> StateXY(0.0, 0.0)
-StateXY(0.0, 0.0)
+-   For >= 3D states, the depth dimension must be named `z` (for [`Patter.simulate_move()`](@ref));
+-   For `R` users, all fields must be of type `Float64` for [`Patter.r_get_states()`](@ref) to parse state vectors;
 ```
 """
 abstract type State end 

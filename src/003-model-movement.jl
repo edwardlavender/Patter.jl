@@ -146,8 +146,7 @@ end
 #########################
 #### Simulate movement steps
 
-# rstep() methods
-# * 
+# simulate_step() methods
 # * The user must provide a new method for new State types
 
 """
@@ -162,6 +161,7 @@ Simulate a (tentative) step from one location (`State`) into a new location (`St
 -   New methods must be provided for custom states or movement models;
 -   Internally, `simulate_step()` is wrapped by `simulate_move()`, which implements `simulate_step()` iteratively until a valid proposal is generated;
 """
+function simulate_step end
 
 # RW in X and Y
 function simulate_step(state::StateXY, model::ModelMoveXY, t::Int64)
@@ -194,7 +194,7 @@ end
 Simulate movement from one location (`State`) into a new location (`State`).
 
 # Details
--   `simulate_move()` is an internal function that uses an [`simulate_step()`](@ref) method to simulate proposals for a new `state` until a valid proposal is generated;
+-   `simulate_move()` is an internal function that uses an [`Patter.simulate_step()`](@ref) method to simulate proposals for a new `state` until a valid proposal is generated;
 
 """
 function simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real = 100_000)
