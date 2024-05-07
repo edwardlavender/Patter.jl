@@ -70,7 +70,7 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
     for key in sort(collect(keys(yobs)))
         # Initialise a Vector of dictionaries
         # * Each dictionary will contain, for a specified time stamp, the observation & essential model parameters 
-        dicts = Vector{Dict}()
+        dicts = Vector{OrderedDict}()
         for (timestamp, observations) in yobs[key]
             for (obs, sensor) in observations
                 if sensor isa model_type
@@ -80,7 +80,7 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
         end
         # Convert the dictionaries to a DataFrame
         df = DataFrame(dicts)
-        df.key .= key 
+        # df.key .= key 
         push!(output, df)
     end 
 
