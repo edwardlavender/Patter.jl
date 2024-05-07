@@ -1,4 +1,5 @@
 using DataFrames
+using OrderedCollections
 
 """
 # R from Julia
@@ -47,10 +48,14 @@ end
 # state = [StateXY(rand(), rand(), rand()) for _ in 1:np, _ in 1:nt]
 # r_get_states(state)
 
+#### Convert struct to dict
+function struct_to_dict(s)
+    return OrderedCollections.OrderedDict(key => getfield(s, key) for key in propertynames(s))
+end
 
 #### Formulate dictionaries to hold the observation for a selected time stamp
 function dict_obs(timestamp, obs, sensor)
-    Dict("timestamp" => timestamp, "obs" >= obs, sensor...)
+    OrderedCollections.OrderedDict(:timestamp => timestamp, :obs => obs, struct_to_dict(sensor)...)
 end 
 
 #### Extract dataset(s) from yobs for a selected model type
