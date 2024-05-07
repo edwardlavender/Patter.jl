@@ -2,7 +2,10 @@
 
 **Particle filters, smoothers and samplers for animal movement modelling in [`Julia`](https://julialang.org)**
 
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+[![Documenter](https://github.com/edwardlavender/Patter.jl/actions/workflows/Documenter.yml/badge.svg)](https://github.com/edwardlavender/Patter.jl/actions/workflows/Documenter.yml)
 [![Runtests](https://github.com/edwardlavender/Patter.jl/actions/workflows/Runtests.yml/badge.svg)](https://github.com/edwardlavender/Patter.jl/actions/workflows/Runtests.yml)
+[![Coverage](https://codecov.io/gh/edwardlavender/Patter.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/edwardlavender/Patter.jl)
 
 [`Patter.jl`](https://github.com/edwardlavender/Patter.jl) is a [`Julia`](https://julialang.org) package that provides particle filters, smoothers and samplers for animal movement modelling, with a focus on passive acoustic telemetry systems. [`Patter.jl`](https://github.com/edwardlavender/Patter.jl) is heavily based on the [`ParticleFish`](https://github.com/scheidan/ParticleFish.jl) package developed by [Andreas Scheidegger](https://www.eawag.ch/de/ueber-uns/portraet/organisation/mitarbeitende/profile/andreas-scheidegger/show/). The package forms the backend for the [`patter`](https://github.com/edwardlavender/patter) [`R`](https://www.r-project.org) package.
 
