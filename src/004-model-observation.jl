@@ -63,9 +63,9 @@ function simulate_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64)
     # Evaluate the distance between the particle and receiver
     dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
     # Define probability of detection
-    prob = ifelse(dist > model.gamma, 0.0, logistic(model.receiver_alpha + model.receiver_beta * dist))
+    prob = ifelse(dist > model.receiver_gamma, 0.0, logistic(model.receiver_alpha + model.receiver_beta * dist))
     # Define distribution
-    rand(Bernoulli(prob))
+    rand(Bernoulli(prob)) + 0
 end
 @doc (@doc ModelObs) simulate_obs
 
