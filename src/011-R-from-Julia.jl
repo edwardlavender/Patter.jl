@@ -82,3 +82,17 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
     output
 
 end 
+
+function r_get_particles(particles::NamedTuple)
+    # Collate information 
+    states      = r_get_states(particles.state)
+    diagnostics = DataFrame(timestamp = particles.timestamp, 
+                            ess = particles.ess, 
+                            maxlp = particles.maxlp)
+    # Return outputs 
+    (
+        states     = states, 
+        diagnostics = diagnostics, 
+        convergence = particles.convergence
+    )
+end 
