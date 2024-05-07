@@ -42,9 +42,6 @@ end
 # julia_get_models(["ModelObsAcousticLogisTrunc"])
 # julia_get_models(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"])
 
-dataset = DataFrame(x = 1.1, y = 1.1, alpha = 1.1, beta = 1.1, gamma = 1.1)
-model_type = ModelObsAcousticLogisTrunc
-
 #### Get a vector of ModelObs instances
 function julia_get_models(parameters::Vector, model_types::Vector{DataType})
     sensors = Vector{ModelObs}()
