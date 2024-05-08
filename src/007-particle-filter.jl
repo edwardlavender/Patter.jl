@@ -6,6 +6,26 @@ using ProgressMeter: @showprogress
 
 export particle_filter
 
+
+# Check user inputs
+
+function check_timeline_entries(t_sim, t_obs)
+    issubset(t_obs, t_sim) || error("There are time stamps in `yobs` not found in `timeline`.")
+    nothing
+end 
+
+function check_timeline_spacing(t_sim)
+    all(diff(t_sim) .== first(diff(t_sim))) || error("`timeline` must be a sequence of requally spaced time steps.")
+    nothing
+end 
+
+function check_timeline(t_sim, t_obs)
+    check_timeline_entries(t_sim, t_obs)
+    check_timeline_spacing(t_sim)
+    nothing
+end 
+
+
 """
     # Systematic resampling algorithm
 
@@ -33,7 +53,7 @@ function resample(w::Vector{Float64}, n::Int = length(w))
     i = 1
     for m in 1:n
         # Calculate the next sample point
-        U = r + (m - 1) * (1/n)
+        U = r + (m - 1) * (1 / n)
         # Find the first weight that puts us past the sample point
         while c < U
             i += 1
@@ -77,7 +97,8 @@ function particle_filter(
     move::ModelMove,
     n_move::Int = 100_000,
     n_record::Int = 1000,
-    n_resample::Float64 = n_record * 0.5)
+    n_resample::Float64 = n_record * 0.5, 
+    direction::String = "forward")
 
     #### Define essential parameters
     # Number of time steps
@@ -88,53 +109,65 @@ function particle_filter(
     nr = n_record
 
     #### Check user inputs
+    # Check time line
+    timeline = sort(timeline)
+    check_timeline(timeline, keys(yobs))
+    # Check particle numbers
     if nr > np
         error("The number of initial particles in `xinit` ($np) must be >= the number of recorded partices in `n_record` ($nr).")
     end
 
-    #### Initiate filter
+    #### Define filter direction
+    if direction == "forward"
+        start = 1
+        timesteps = 2:nt
+    elseif direction == "backward"
+        start = nt
+        timesteps = (nt - 1):-1:1
+    else 
+        error("`direction` must be \"forward\" or \"backward\".")
+    end 
+
+    #### Define particle objects
     # Particles
     xpast = deepcopy(xinit)
     xnow = deepcopy(xinit)
+    xout = Matrix{eltype(xinit)}(undef, nr, nt);
     # (log) weights
     lw = zeros(np)
-    # Output ESS vector
-    ess = zeros(nt)
-    ess[1] = np
-    # Output maxlp vector
-    maxlp = zeros(nt)
-    maxlp[1] = NaN
     # Output particles
     xout = Matrix{eltype(xinit)}(undef, nr, nt);
-    xout[:, 1] .= xinit[1:nr]
+    xout[:, start] .= xinit[1:nr]
 
-    #### Select direction
-    # TO DO
-
+    #### Define diagnostic objects
+    # Output ESS vector
+    ess = zeros(nt)
+    ess[start] = np
+    # Output maxlp vector
+    maxlp = zeros(nt)
+    maxlp[start] = NaN
+   
     #### Run filter
-    @showprogress desc = "Computing..." for t in 2:nt
+    @showprogress desc = "Running filter..." for t in timesteps
 
         # println(t)
 
-        #### Move particles
-        # * We thread over particles & separately over likelihoods
-        # * This appears to be faster than threading once over particles
-        timestamp = timeline[t]
+        #### Move particles & compute weights
+        # * We iterate once over particles b/c this is thread safe
+        timestamp            = timeline[t]
+        has_obs_at_timestamp = haskey(yobs, timestamp)
+        yobs_at_timestamp    = yobs[timestamp]
         @threads for i in 1:np
             if isfinite(lw[i])
+                # Move particles
                 xnow[i], lwi = simulate_move(xpast[i], move, t, n_move)
                 lw[i] += lwi
-            end
-        end
-
-        #### Update (log) weights
-        if haskey(yobs, timestamp)
-            @threads for (obs, model) in yobs[timestamp]
-                for i in 1:np
-                    if isfinite(lw[i])
+                # Evaluate likelihoods
+                if has_obs_at_timestamp && isfinite(lw[i])
+                    for (obs, model) in yobs_at_timestamp
                         lw[i] += logpdf_obs(xnow[i], model, t, obs)
                     end
-                end
+                end 
             end
         end
 
@@ -144,8 +177,16 @@ function particle_filter(
         #### (optional) Resample particles
         # Validate weights
         if !any(isfinite.(lw))
-           @warn "All weights are zero at time $t: returning outputs up to this time."
-           return (timestamp = timeline[1:t], state = xout[:, 1:t], ess = ess[1:t], maxlp = maxlp[1:t], convergence = false)
+           @warn "Weights from filter ($start -> $t) are zero at time $t: returning outputs up to $(t - 1)."
+           pos = sort([start, t - 1])
+           pos = pos[1]:pos[2]
+           return (timesteps    = collect(pos), 
+                   timestamps   = timeline[pos], 
+                   state        = xout[:, pos], 
+                   direction    = direction, 
+                   ess          = ess[pos], 
+                   maxlp        = maxlp[pos], 
+                   convergence  = false)
         end
         # Normalise weights
         lw_norm = lw .- logsumexp(lw)
@@ -166,6 +207,14 @@ function particle_filter(
 
     end
 
-    (timestamp = timeline, state = xout, ess = ess, maxlp = maxlp, convergence = true)
+    (
+        timesteps   = collect(1:nt), 
+        timestamps  = timeline, 
+        state       = xout, 
+        direction   = direction, 
+        ess         = ess, 
+        maxlp       = maxlp, 
+        convergence = true
+    )
 
 end

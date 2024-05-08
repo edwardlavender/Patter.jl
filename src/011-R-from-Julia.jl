@@ -13,7 +13,7 @@ A collection of functions that facilitate the translation of inputs from `Julia`
 # Returns 
 A long-format `DataFrame`, with columns for `path_id`, `timestep` and each state dimension.
 """
-function r_get_states(state::Matrix)
+function r_get_states(state::Matrix, timesteps::Vector = 1:size(state, 2))
     # Initialise empty matrix
     fields = fieldnames(typeof(state[1]))
     values = Matrix{Float64}(undef, prod(size(state)), length(fields) + 2)
@@ -28,9 +28,14 @@ function r_get_states(state::Matrix)
             values[i, j + 2] = getfield(state[Int(values[i, 1]), Int(values[i, 2])], fields[j])
         end 
     end 
+    # Replace column indices with timesteps 
+    values[:, 2] = repeat(minimum(timesteps):maximum(timesteps), outer = np)
     # Coerce to dataframe
     fields = (:path_id, :timestep, fields...)
-    DataFrame(values, collect(fields))
+    df = DataFrame(values, collect(fields))
+    df.path_id = Int.(df.path_id)
+    df.timestep = Int.(df.timestep)
+    df
 end
 
 # Examples:
@@ -90,8 +95,9 @@ end
 
 function r_get_particles(particles::NamedTuple)
     # Collate information 
-    states      = r_get_states(particles.state)
-    diagnostics = DataFrame(timestamp = particles.timestamp, 
+    states      = r_get_states(particles.state, particles.timesteps)
+    diagnostics = DataFrame(timestep = particles.timesteps, 
+                            timestamp = particles.timestamps, 
                             ess = particles.ess, 
                             maxlp = particles.maxlp)
     # Return outputs 
