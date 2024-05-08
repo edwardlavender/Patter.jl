@@ -19,9 +19,11 @@ To extract a value from a map in another format, such as a shapefile, write a cu
 - NaN (of the same type as `map`'s elements) for a coordinate pair beyond the bounds of `map`;
 """
 function extract(map::GeoArrays.GeoArray, x::Real, y::Real)
-    cell = GeoArrays.indices(map, (x, y))
-    if checkbounds(Bool, map, cell)
-        map[cell]
+    # Get row and column indices from coordinates
+    rc = GeoArrays.indices(map, [x, y])
+    if checkbounds(Bool, map, rc)
+        # Extract value of the GeoArray at the specified row/column
+        map[rc[1], rc[1]]
     else
         eltype(map)(NaN)
     end
@@ -90,4 +92,20 @@ function distance end
 function distance(x0::Real, y0::Real, x1::Real, y1::Real)
     # sqrt((x0 - x1)^2 + (y0 - y1)^2)
     hypot(x0 - x1, y0 - y1)
+end
+
+
+"""
+# Cartesian to polar coordinates
+"""
+function cartesian_to_polar(x, y)
+    (length = hypot(x, y), angle = atan(y, x))
+end 
+
+"""
+Compute the smallest absolute rotation between two angles
+"""
+function abs_angle_difference(a1, a2)
+    delta_angle = mod(abs(a1 - a2), 2π)
+    min(delta_angle, 2π - delta_angle)
 end
