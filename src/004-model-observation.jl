@@ -84,7 +84,7 @@ function logpdf_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, o
     
     # Calculate log probability given non detection (0)
     elseif obs == 0
-        if (dist > model.receiver_gamma)
+        if dist > model.receiver_gamma
             return 0.0
         else 
             return -log1pexp(model.receiver_alpha + model.receiver_beta * dist)
