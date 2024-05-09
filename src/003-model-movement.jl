@@ -1,9 +1,12 @@
-#########################
-#########################
-#### ModelMove structures
+using LRUCache: LRU
 
 export ModelMove, ModelMoveXY, ModelMoveXYZD
 export simulate_states_init
+
+
+#########################
+#########################
+#### ModelMove structures
 
 """
     Movement models 
@@ -220,3 +223,100 @@ function simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real =
 
 end 
 
+
+#########################
+#########################
+#### Evaluate densities
+
+"""
+# Calculate the unnormalised logpdf of an (unrestricted) movement step
+
+# Details
+
+* logpdf_step() is wrapped by the internal logpdf_move() function
+* For new states, a corresponding logpdf_step() method is required
+* logpdf_move() accounts for restricted steps, the determinate and the normalisation
+
+"""
+function logpdf_step(state_from::StateXY, state_to::StateXY, move::ModelMoveXY, length::Float64, angle::Float64) 
+    logpdf(move.dbn_length, length) + logpdf(move.dbn_angle, angle)
+end 
+
+# function logpdf_step(state_from::StateXYZ, ...)
+
+function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, move::ModelMoveXYZD, length::Float64, angle::Float64) 
+    # Compute change in depth 
+    z_delta = state_to.z - state_from.z
+    # Compute change in angle 
+    angle_delta = abs_angle_difference(angle, state_from.angle)
+    # Sum up logpdfs 
+    logpdf(move.dbn_length, length) + logpdf(move.dbn_angle_delta, angle_delta) + logpdf(move.dbn_z_delta, z_delta)
+end 
+
+"""
+# Calculate the logpdf of a restricted movement
+
+An internal function that calculates the logpdf of a movement from one state to another. 
+"""
+function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
+                     move::ModelMove, t::Int, box, nMC::Int = 100, 
+                     cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
+
+    #### Validate state 
+    if !state_is_valid(state_to, state_zdim)
+       return -Inf
+    end
+
+    #### Evaluate density components
+    # Calculate step length and turning angle
+    x = state_to.x - state_from.x
+    y = state_to.y - state_from.y
+    length, angle = cartesian_to_polar(x, y)
+    # When locations are far apart, we set -Inf density for speed
+    if cdf(move.dbn_length, length) > 0.999
+        return -Inf
+    end
+    # Calculate log(abs(determinate))
+    log_det = -0.5 * log(x^2 + y^2)
+    # Approximate the normalisation constant
+    Z = logpdf_move_normalisation(state_from, state_zdim, move, t, box, nMC, cache)
+    
+    #### Evaluate density 
+    logpdf_step(state_from, state_to, move, length, angle) + log_det - log(Z)
+
+end 
+
+
+# (Internal) normalisation constants
+function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, box, nMC::Int)
+    
+    # Set normalisation constant to 1.0 if the individual is within a box
+    # * `box` can be provided for 2D states & if there are no NaNs in the study area
+    # * It defines the box within which a move is always valid 
+    # * (i.e., the extent of the study area - mobility)
+    if !isnothing(box) && in_bbox(box, state.x, state.y)
+        return 1.0
+    end 
+
+    # Run simulation 
+    k = 0.0
+    for i in 1:nMC
+        # Simulate an (unrestricted) step into a new location 
+        pstate = simulate_step(state, move, t)
+        # Validate the step
+        if state_is_valid(pstate, state_zdim)
+            k += 1.0
+        end
+    end
+
+    # Evaluate posterior mean
+    # * This assumes a Beta(1, 1) prior
+    (k + 1) / (nMC + 2)
+end
+
+# Cached version 
+function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, box, nMC::Int, cache::LRU)
+    get!(cache, state) do
+        logpdf_move_normalisation(state, state_zdim, move, t, box, nMC)
+    end
+end

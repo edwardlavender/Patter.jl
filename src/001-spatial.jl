@@ -74,6 +74,14 @@ end
 
 
 """
+Determine whether or not a coordinate (x, y) is within a boundary box.
+"""
+function in_bbox(bb, x, y)
+    x >= bb.min_x && x <= bb.max_x && y >= bb.min_y && y <= bb.max_y
+end
+
+
+"""
     distance(x0::Real, y0::Real, x1::Real, y1::Real)
 
 Calculate Euclidean distances between coordinates. 
