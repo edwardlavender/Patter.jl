@@ -23,7 +23,7 @@ function extract(map::GeoArrays.GeoArray, x::Real, y::Real)
     rc = GeoArrays.indices(map, [x, y])
     if checkbounds(Bool, map, rc)
         # Extract value of the GeoArray at the specified row/column
-        map[rc[1], rc[1]]
+        map[rc[1], rc[2], 1]
     else
         eltype(map)(NaN)
     end
