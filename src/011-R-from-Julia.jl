@@ -13,7 +13,7 @@ A collection of functions that facilitate the translation of inputs from `Julia`
 # Returns 
 A long-format `DataFrame`, with columns for `path_id`, `timestep` and each state dimension.
 """
-function r_get_states(state::Matrix, timesteps::Vector = 1:size(state, 2))
+function r_get_states(state::Matrix, timesteps::Vector = collect(1:size(state, 2)))
     # Initialise empty matrix
     fields = fieldnames(typeof(state[1]))
     values = Matrix{Float64}(undef, prod(size(state)), length(fields) + 2)
