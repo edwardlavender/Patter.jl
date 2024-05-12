@@ -74,6 +74,17 @@ end
 
 
 """
+Define extent object
+
+Designed to match GeoArray.bbox()
+For passing bounding box from R
+"""
+function ext(x::Vector{Real})
+    length(x) == 4 || error("An extent is defined by four numbers.")
+    (min_x = x[1], max_x = x[2], min_y = x[3], max_y = [4])
+end 
+
+"""
 Determine whether or not a coordinate (x, y) is within a boundary box.
 """
 function in_bbox(bb, x, y)

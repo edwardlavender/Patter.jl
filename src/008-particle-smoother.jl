@@ -1,7 +1,7 @@
 using Base.Threads: @threads
 using ProgressMeter: @showprogress
 
-export particle_smoother_two_filter
+export two_filter_smoother
 
 """
 Two filter smoother
@@ -11,7 +11,7 @@ algorithm with linear computational cost. Biometrika 97,
 447–464. https://doi.org/10.1093/biomet/asq013
 
 """
-function particle_smoother_two_filter(;xfwd::Matrix, xbwd::Matrix, move::ModelMove, box = nothing, nMC::Int = 100)
+function two_filter_smoother(;xfwd::Matrix, xbwd::Matrix, move::ModelMove, box = nothing, nMC::Int = 100)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")

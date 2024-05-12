@@ -7,7 +7,8 @@ include("004-model-observation.jl")
 include("005-data-assembly.jl")
 include("006-data-simulation.jl")
 include("007-particle-filter.jl")
-
+include("008-particle-smoother.jl")
+# include("009-particle-sampler.jl")
 include("010-Julia-from-R.jl")
 include("011-R-from-Julia.jl")
 

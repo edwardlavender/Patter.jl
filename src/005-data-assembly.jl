@@ -67,21 +67,17 @@ function assemble_yobs(datasets::Vector, model_types::Vector{DataType})
     # Iterate over datasets/models
     for (dataset, model_type) in zip(datasets, model_types)
     
-        # Define dataset parameters and ModelObs subtype
-        parameters      = select(dataset, Not([:timestamp, :obs]))
-        # strings         = any(col -> isa(first(col), String), eachcol(dataset))
+        # Define dataset parameters
+        parameters = select(dataset, Not([:timestamp, :obs]))
+        # Enforce a column order that matches the components of model_type
+        parameters = parameters[:, [col for col in fieldnames(model_type)]] 
     
         # Iterate over time steps & add observations & ModelObs objects
         for (timestamp, obs, row) in zip(dataset.timestamp, dataset.obs, Tables.namedtupleiterator(parameters))
             if !haskey(yobs, timestamp)
                 # yobs[timestamp] = Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}() 
                 yobs[timestamp] = entry
-            end 
-            # Build ModelObs object
-            # values = row
-            # if (strings)
-            #    row = map(eval_string_as_symbol, row)
-            # end            
+            end  
             # Update dictionary 
             push!(yobs[timestamp], (obs, model_type(row...)))
         end 
