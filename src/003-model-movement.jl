@@ -15,9 +15,9 @@ export simulate_states_init
 
 # Subtypes
 
--   `MoveModelXY`: A subtype for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
--   `MoveModelXYZ`: A subtype for three-dimensional (x, y, z) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_angle`) and changes in depth (`dbn_z_delta`);
--   `MoveModelXYZD`: A subtype for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   ``: A subtype for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
+-   `ModelMoveXY`: A subtype for three-dimensional (x, y, z) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   `ModelMoveXYZD`: A subtype for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
 
 # Fields
 
