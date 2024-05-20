@@ -9,35 +9,139 @@ export ModelObsDepthUniform, ModelObsDepthNormalTrunc, ModelObsDepthNormal
 """
     Observation models
 
-# Structures
+# `ModelObs`
 
-`ModelObs` is an abstract type used to hold parameters for observation models. For communication with `R`, all subtypes should include a `sensor_id` field. 
+`ModelObs` is an Abstract Type that groups observation model structures. See below for built-in subtypes. 
 
-`ModelObsAcousticLogisTrunc` is a `ModelObs` structure for an acoustic observation and a truncated logistic detection probability model:
+# Built-in subtypes 
+
+## `ModelObsAcousticLogisTrunc`
+
+`ModelObsAcousticLogisTrunc` is a `ModelObs` structure for an acoustic observation (0, 1) and a truncated logistic detection probability model. This contains the following fields:
+- `sensor_id`: An integer that defines the sensor (receiver) ID;
+- `receiver_x`, `receiver_y`: Floats that define the x and y coordinates of the receiver;
+- `receiver_alpha`, `receiver_beta`, `receiver_gamma`: Floats that define the parameters of a truncated logistic detection probability model. 
+
+An acoustic observation (``y^{(A)}_{t, k} \\in {0, 1}``) at receiver ``k`` (location ``\\textit{\\textbf{r}}_k = (\\text{receiver\\_x}, \\text{receiver\\_y})``) at time ``t`` is modelled using a Bernoulli probability mass function:
+
+```math
+f(y^{(A)}_{t, k} | \\textit{\\textbf{s}}_t) = \\text{Bernoulli}(p_{k,t}(\\textit{\\textbf{s}}_t))
+```
+
+where ``p_{k,t}(\\textit{\\textbf{s}}_t)`` is the probability of a detection at receiver ``k`` at time ``t`` given a transmission from location ``\\textit{\\textbf{s}}_t = (x, y)``. `ModelObsAcousticLogisTrunc` represents ``p_{k,t}(\\textit{\\textbf{s}}_t)`` as a logistic function of the Euclidean location between the receiver and the transmitter, according to the equation:
  
-- `sensor_id`: The receiver ID;
-- `receiver_x`, `receiver_y`: The coordinates of the receiver;
-- `receiver_alpha`, `receiver_beta`, `receiver_gamma`: The parameters of a logistic detection probability model;
+```math
+p_{k,t}(\\textit{\\textbf{s}}_t) = \\left\\{
+\\begin{array}{ll}
+(1 + e^{-(\\text{receiver\\_alpha} - \\text{receiver\\_beta} \\cdot |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k|)})^{-1} & \\text{if } |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k| < \\text{receiver\\_gamma} \\\\
+0 & \\text{otherwise}
+\\end{array}
+\\right.
+```
 
-`ModelObsDepthUniform` is `ModelObs` structure for a depth observation and a uniform depth model, in which we assume the individual must be located in an envelope around the bathymetry depth, defined by two error terms:
+where ``\\text{receiver\\_gamma}`` is the detection range. 
 
-- `sensor_id`: The sensor ID;
-- `depth_shallow_eps`
-- `depth_deep_eps`
+To simulate an acoustic observation (``y^{(A)}_{t, k} \\in {0, 1}``) from this model, we can draw a sample from a Bernoulli distribution:
 
-`ModelObsDepthNormalTrunc` is a `ModelObs` structure for a depth observation and a truncated normal model, in which we assume the likelihood of a depth observation given by a normal distribution centred at the bathymetric depth in a location and defined by the parameters:
+```math
+y^{(A)}_{t, k} | \\textit{\\textbf{s}}_t \\sim \\text{Bernoulli}(p_{k,t}(\\textit{\\textbf{s}}_t))
+```
+via [`Patter.simulate_obs()`](@ref).
 
-- `sensor_id`: The sensor ID;
-- `depth_sigma`: The standard deviation of the normal distribution;
-- `deep_depth_eps`: The deep truncation parameter;
+## `ModelObsDepthUniform`
+
+`ModelObsDepthUniform` is `ModelObs` structure for a depth observation and a uniform depth model. This contains the following fields:
+
+- `sensor_id`: An integer that defines the sensor (tag) ID;
+- `depth_shallow_eps`: A float that defines the shallow depth error;
+- `depth_deep_eps`: A float that defines the deep depth error;
+
+This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by two error terms (`depth_shallow_eps` and `depth_shallow_eps`), according to the equation:
+
+```math
+f\\left( y_t^{(D)} |  \\textit{\\textbf{s}}_t \\right) =
+\\begin{cases} 
+z_t & \\text{if } b(\\textit{\\textbf{s}}_t) - \\text{depth\\_shallow\\_eps} \\leq y_t^{(D)} \\leq b(\\textit{\\textbf{s}}_t) + \\text{depth\\_deep\\_eps} \\\\
+0 & \\text{otherwise}
+\\end{cases}
+```
+
+where ``y_t^{(D)}`` is the observed depth, ``b(\\textit{\\textbf{s}}_t)`` is the bathymetric depth in location ``\\textit{\\textbf{s}}_t`` and ``z_t`` is a constant.
+
+We can simulate observations from this model as follows:
+
+```math
+y_t^{(D)} |  \\textit{\\textbf{s}}_t \\sim \\text{Uniform}(b(\\textit{\\textbf{s}}_t) + \\text{depth\\_deep\\_eps}, \\text{min}(b(\\textit{\\textbf{s}}_t) - \\text{depth\\_shallow\\_eps}, 0))
+```
+
+via [`Patter.simulate_obs()`](@ref).
+
+## `ModelObsDepthNormalTrunc`
+
+`ModelObsDepthNormalTrunc` is a `ModelObs` structure for a depth observation and a truncated normal model. This contains the following fields:
+
+- `sensor_id`: An integer that defines the sensor (tag) ID;
+- `depth_sigma`: A float that defines the standard deviation of the normal distribution;
+- `deep_depth_eps`: A float that defines the deep truncation parameter;
+
+This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by a normal distribution centred at this location with standard deviation `depth_sigma`: 
+
+```math
+f(y_t^{(D)} | \\textit{\\textbf{s}}_t) = \\text{TruncatedNormal}(b(\\textit{\\textbf{s}}_t), \\text{depth\\_sigma}^2, 0, b(\\textit{\\textbf{s}}_t)).
+```
+
+We can simulate observations from this model as for previous models via [`Patter.simulate_obs()`](@ref).
+
+# Custom sub-types
+
+To define a custom sub-type, such as `ModelObsDepthNormal`, simply define a `struct` that is a sub-type of `Patter.ModelObs`:
+
+```
+struct ModelObsDepthNormal <: Patter.ModelObs
+    sensor_id::Int64
+    depth_sigma::Float64
+end
+```
+
+For communication with `R`, all subtypes should include a `sensor_id` field. 
+
+Add corresponding methods to simulate observations via [`Patter.simulate_obs()`](@ref) and to evaluate log probabilities via [`Patter.logpdf_obs()`](@ref). 
 
 # Simulation
 
-`simulate_obs()` is a generic function that simulates observations from a `ModelObs` instance. 
+[`Patter.simulate_obs()`](@ref) is an internal generic function that simulates observations, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
+-   `state`: A [`State`](@ref) instance;
+-   `model`: A [`ModelObs`](@ref) instance;
+-   `t`: An integer that defines the time step;
 
-# Density 
+Methods are implemented for all built-in sub-types. Methods can be defined for new sub-types, such as `ModelObsDepthNormal`, as follows:
+```
+function Patter.simulate_obs(state::StateXYZD, model::ModelObsDepthNormal, t::Int64)
+    dbn   = truncated(Normal(state.z, model.depth_sigma), 0, state.map_value)
+    rand(dbn)
+end
+```
 
-`logpdf_obs()` is a generic function that calculates the log probability (density) of an observation, given the animal's `state` and a `ModelObs` instance.
+[`Patter.simulate_obs()`](@ref) is wrapped by [`simulate_yobs()`](@ref) for the simulation of observations.
+
+# Log probabilities 
+
+[`Patter.logpdf_obs()`](@ref) is a generic function that calculates the log probability (density) of an observation, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
+-   `state`: A `State` instance;
+-   `model`: A [`ModelObs`](@ref) instance;
+-   `t`: An integer that defines the time step;
+-   `obs`: The observation;
+
+Methods are implemented for all built-in sub-types. Methods can be defined for new sub-types, such as `ModelObsDepthNormal`, as follows:
+```
+function Patter.logpdf_obs(state::State, model::ModelObsDepthNormal, t::Int64, obs::Float64)
+    dbn   = truncated(Normal(state.map_value, model.depth_sigma),
+                      0.0, state.map_value)
+    logpdf(dbn, obs)
+  end
+```
+
+[`Patter.logpdf_obs()`](@ref) is used in [`particle_filter()`](@ref) to evaluate the log-probability of the data given particle samples.
         
 """
 abstract type ModelObs end
