@@ -35,8 +35,9 @@ end
 
 #### Get a vector of ModelObs types 
 
-function julia_get_model_types(models::Vector{String})
-    [eval(Symbol(model)) for model in models]
+function julia_get_model_types(models::Union{String, Vector{String}})
+    models = isa(models, String) ? [models] : models
+    return [getfield(Main, Symbol(model)) for model in models]
 end
 
 # julia_get_models(["ModelObsAcousticLogisTrunc"])
