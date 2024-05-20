@@ -85,6 +85,7 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
         end
         # Convert the dictionaries to a DataFrame
         df = DataFrame(dicts)
+        sort!(df, [:timestamp, :sensor_id])
         # df.key .= key 
         push!(output, df)
     end 
