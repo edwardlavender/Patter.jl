@@ -11,15 +11,16 @@ export simulate_states_init
 """
     Movement models 
 
-`ModelMove` is an abstract type that defines the movement model. 
+`ModelMove` is an Abstract Type that groups movement models. 
 
-# sub-types
+# Built-in sub-types
 
--   ``: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
--   `ModelMoveXY`: A sub-type for three-dimensional (x, y, z) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_angle`) and changes in depth (`dbn_z_delta`);
--   `ModelMoveXYZD`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+`ModelMove` sub-types define the components of different kinds of movement model. The following sub-types are built-in:
 
-# Fields
+-   `ModelMoveXY(map, dbn_length, dbn_angle)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
+-   `ModelMoveXYZD(map, dbn_length, dbn_angle_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+
+These contain the following fields: 
 
 -   `map`: A field that defines the arena within which movement occurs. This is required by all movement models;
 -   `dbn_length`: The distribution of step lengths;
@@ -27,13 +28,34 @@ export simulate_states_init
 -   `dbn_angle_delta`: The distribution of changes in turning angle;
 -   `dbn_z_delta`: The distribution of changes in depth;
 
-# Details
+# Custom sub-types
 
--   ModelMove structures define the parameters of the movement model;
--   All ModelMove structures must contain an `map` field. 
--   By default, `map` is assumed to be a GeoArray but a shapefile can be used with a custom [`extract()`](@ref) method;
--   Users can use a provided structure or write their own;
--   For custom ModelMoves, new rstep() methods are required;
+To define a custom sub-type, such as `ModelMoveXYZ`, simply define a `struct` that is a sub-type of `Patter.ModelMove`:
+
+```
+struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
+    # The environment (i.e., map)
+    # > This defines the regions within which movements are permitted (i.e., in water)
+    map::T
+    # Distribution for step lengths
+    dbn_length::U
+    # Distribution for turning angles
+    dbn_angle::V
+    # Distribution for changes in depth
+    dbn_z_delta::W
+  end
+```
+
+New `ModelMove` structures should obey the following requirements:
+-   The `map` field is required by all `ModelMove` sub-types; 
+-   By default, `map` is assumed to be a `GeoArray` but a shapefile can be used with a custom [`extract()`](@ref) method;
+
+To use a new `ModelMove` sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
+-   Define a corresponding [`State`](@ref) sub-type;
+-   (optional) Define a [`Patter.simulate_state_init()`](@ref) method for [`simulate_states_init()`](@ref) to simulate initial states;
+-   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
+-   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
+
 """
 abstract type ModelMove end 
 
