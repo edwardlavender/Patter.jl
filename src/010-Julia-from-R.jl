@@ -8,27 +8,18 @@ A collection of functions that facilitate the translation of inputs from R into 
 
 # Details
 
-* [`julia_get_xinit()`] gets a Vector of initial States from a DataFrame;
-* [`julia_get_model_types()`] gets a Vector of `ModelObs` subtypes from a Vector of Strings;
-* [`julia_get_models()`] gets a Vector of model instances from a Vector of DataFrames that contain parameters and a corresponding vector of model types;
+* [`julia_get_xinit()`](@ref) gets a Vector of initial States from a DataFrame;
+* [`julia_get_model_types()`](@ref) gets a Vector of `ModelObs` subtypes from a Vector of Strings;
+* [`julia_get_models()`](@ref) gets a Vector of model instances from a Vector of DataFrames that contain parameters and a corresponding vector of model types;
 
 """
 function julia_get end 
 
 #### Get the Vector of initial States 
-
-function julia_get_xinit(state::Type{StateXY}, d::DataFrame)
-    [StateXY(d.map_value[i], d.x[i], d.y[i]) for i in 1:nrow(d)]
-end
-@doc (@doc julia_get) julia_get_xinit
-
-function julia_get_xinit(state::Type{StateXYZ}, d::DataFrame)
-    [StateXYZ(d.map_value[i], d.x[i], d.y[i], d.z[i]) for i in 1:nrow(d)]
-end
-
-function julia_get_xinit(state::Type{StateXYZD}, d::DataFrame)
-    [StateXYZD(d.map_value[i], d.x[i], d.y[i], d.z[i], d.angle[i]) for i in 1:nrow(d)]
-end
+function julia_get_xinit(state::Type{<:State}, d::DataFrame)
+    fields = fieldnames(state)
+    [state((d[i, Symbol(field)] for field in fields)...) for i in 1:nrow(d)]
+end 
 
 # d = DataFrame(map_value = [0, 1], x = [1, 2], y = [3, 4])
 # julia_get_xinit(StateXY, d)
