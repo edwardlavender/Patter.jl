@@ -8,9 +8,9 @@ A collection of functions that facilitate the translation of inputs from R into 
 
 # Details
 
-* [`julia_get_xinit()`](@ref) gets a Vector of initial States from a DataFrame;
-* [`julia_get_model_types()`](@ref) gets a Vector of `ModelObs` subtypes from a Vector of Strings;
-* [`julia_get_models()`](@ref) gets a Vector of model instances from a Vector of DataFrames that contain parameters and a corresponding vector of model types;
+* `Patter.julia_get_xinit()` gets a Vector of initial [`State`](@ref)s from a DataFrame;
+* `Patter.julia_get_model_types()` gets a Vector of [`ModelObs`](@ref) sub-types from a Vector of Strings;
+* `Patter.julia_get_models()` gets a `Vector` of [`ModelObs`](@ref) instances from a `Vector` of `DataFrame`s that contain parameters and a corresponding vector of [`ModelObs`](@ref) sub-types;
 
 """
 function julia_get end 

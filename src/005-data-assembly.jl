@@ -49,7 +49,7 @@ Assemble a dictionary of observations (and associated model parameters) for the 
     - `sensor_id`: A vector of sensor IDs;
     - `obs`: The observation;
     - Additional columns required to construct ModelObs instances (that is, model parameters);
--   model_types: A Vector of ModelObs subtypes for each dataset. 
+-   model_types: A Vector of ModelObs sub-types for each dataset. 
 
 # Details
 

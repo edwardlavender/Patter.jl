@@ -13,11 +13,11 @@ export simulate_states_init
 
 `ModelMove` is an abstract type that defines the movement model. 
 
-# Subtypes
+# sub-types
 
--   ``: A subtype for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
--   `ModelMoveXY`: A subtype for three-dimensional (x, y, z) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_angle`) and changes in depth (`dbn_z_delta`);
--   `ModelMoveXYZD`: A subtype for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   ``: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
+-   `ModelMoveXY`: A sub-type for three-dimensional (x, y, z) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   `ModelMoveXYZD`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
 
 # Fields
 
@@ -79,7 +79,7 @@ Simulate an initial state.
 This function is wrapped by the exported function [`simulate_states_init()`](@ref), which simulates a vector of states.
 
 # Arguments:
--   `state_type`: An empty `State` subtype, such as `StateXY`, used for method dispatch only;
+-   `state_type`: An empty `State` sub-type, such as `StateXY`, used for method dispatch only;
 -   `model`: A `MoveModel` instance;
 -   `xlim`, `ylim`: Pairs of numbers that define the boundaries of the area within which `x` and `y` state values are sampled;
 
@@ -111,7 +111,7 @@ end
 Simulate a vector of initial states for the simulation of movement paths and the particle filter.
 
 # Arguments
-- `state_type`: An empty `State` subtype, such as `StateXY`, used for method dispatch only;
+- `state_type`: An empty `State` sub-type, such as `StateXY`, used for method dispatch only;
 -   `move`: A `MoveModel` instance;
 -   `n`: The number of intial states to simulate;
 -   `xlim`, `ylim`: (optional) Pairs of numbers that define the boundaries of the area within which `x` and `y` state values are sampled;

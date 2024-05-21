@@ -82,7 +82,7 @@ A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t â
     - The movement model describes movement from one time step to the next and therefore depends implicitly on the resolution of `timeline`.
     - The movement model should align with the [`State`] instances in `.xinit`. For example, a 2-dimensional state ([`StateXY`](@ref)) requires a corresponding movement model instance (i.e., [`ModelMoveXY`](@ref)). 
 - `n_move`: An integer that defines the number of attempts used to find a legal move. 
-    - All [`ModelMove`](@ref) subtypes contain a `map` field that defines the region(s) within which movements are allowed.
+    - All [`ModelMove`](@ref) sub-types contain a `map` field that defines the region(s) within which movements are allowed.
     - Each particle is moved up to `n_move` times, until a valid movement is simulated. 
     - Particles that fail to generate a valid move are killed. 
 - `n_record`: An integer that defines the number of particles to record at each time step.

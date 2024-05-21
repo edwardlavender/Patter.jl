@@ -39,7 +39,7 @@ To collate real-world datasets for real-world analyses, use:
 
 * `assemble_yobs()` to assemble a hash-table;
 
-This function expects a `Vector` of `DataFrame`s, one for each data type, that comprise a timeline of observations and associated model parameters, and a corresponding `Vector` of observation model (`ModelObs`) subtypes. 
+This function expects a `Vector` of `DataFrame`s, one for each data type, that comprise a timeline of observations and associated model parameters, and a corresponding `Vector` of observation model (`ModelObs`) sub-types. 
 
 ## Modelling
 

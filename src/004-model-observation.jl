@@ -11,9 +11,9 @@ export ModelObsDepthUniform, ModelObsDepthNormalTrunc, ModelObsDepthNormal
 
 # `ModelObs`
 
-`ModelObs` is an Abstract Type that groups observation model structures. See below for built-in subtypes. 
+`ModelObs` is an Abstract Type that groups observation model structures. See below for built-in sub-types. 
 
-# Built-in subtypes 
+# Built-in sub-types 
 
 ## `ModelObsAcousticLogisTrunc`
 
@@ -103,7 +103,7 @@ struct ModelObsDepthNormal <: Patter.ModelObs
 end
 ```
 
-For communication with `R`, all subtypes should include a `sensor_id` field. 
+For communication with `R`, all sub-types should include a `sensor_id` field. 
 
 Add corresponding methods to simulate observations via [`Patter.simulate_obs()`](@ref) and to evaluate log probabilities via [`Patter.logpdf_obs()`](@ref). 
 
