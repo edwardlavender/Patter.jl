@@ -22,7 +22,7 @@ export simulate_states_init
 
 These contain the following fields: 
 
--   `map`: A field that defines the arena within which movement occurs. This is required by all movement models;
+-   `map`: A field that defines the arena within which movement occurs. The coordinate reference system of the `map` must align with the other components of the movement model, which typically require a Universal Transverse Mercator (planar) projection with coordinates in metres. `map` is required by all movement models;
 -   `dbn_length`: The distribution of step lengths;
 -   `dbn_angle`: The distribution of turning angles;
 -   `dbn_angle_delta`: The distribution of changes in turning angle;
