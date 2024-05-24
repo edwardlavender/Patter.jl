@@ -11,7 +11,7 @@ algorithm with linear computational cost. Biometrika 97,
 447–464. https://doi.org/10.1093/biomet/asq013
 
 """
-function two_filter_smoother(;xfwd::Matrix, xbwd::Matrix, move::ModelMove, box = nothing, nMC::Int = 100)
+function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, move::ModelMove, box = nothing, nMC::Int = 100)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
@@ -20,13 +20,15 @@ function two_filter_smoother(;xfwd::Matrix, xbwd::Matrix, move::ModelMove, box =
     # Dimension of input state
     zdim = hasfield(typeof(xfwd[1]), :z)
     # Matrix for smoothed particles
-    xsmooth = similar(xfwd)
-    xsmooth[:, 1] .= xbwd[:, 1]
-    xsmooth[:, end] .= xfwd[:, end]
-    np, nt = size(xsmooth)
+    xout = similar(xfwd)
+    xout[:, 1] .= xbwd[:, 1]
+    xout[:, end] .= xfwd[:, end]
+    np, nt = size(xout)
     # Vectors for weights and ESS
     w = ones(np)
     ess = zeros(nt)
+    ess[1] = NaN
+    ess[nt] = NaN 
     # Least recently used cache 
     cache = LRU{eltype(xfwd), Float64}(maxsize = np)
 
@@ -43,9 +45,19 @@ function two_filter_smoother(;xfwd::Matrix, xbwd::Matrix, move::ModelMove, box =
         ess[t] = 1 / sum(abs2, w)
         # Resample particles & store
         idx = resample(w, np)
-        xsmooth[:, t] .=  xbwd[idx, t]
+        xout[:, t] .=  xbwd[idx, t]
     end
 
-    (state = xsmooth, ess = ess)
+    #### Return outputs
+    # Follow particle_filter() format
+    (
+        timesteps   = collect(1:nt), 
+        timestamps  = timeline, 
+        state       = xout, 
+        direction   = nothing, 
+        ess         = ess, 
+        maxlp       = NaN, 
+        convergence = true
+    )
 
 end
