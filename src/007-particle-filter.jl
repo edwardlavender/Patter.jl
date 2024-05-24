@@ -70,6 +70,7 @@ end
 # Particle filter
 
 A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t ∈ 1:Tmax`.
+
 # Arguments
 
 - `timeline`: A Vector{DateTime} of ordered, regularly spaced time stamps that defines the time steps for the simulation.
