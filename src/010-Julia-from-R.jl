@@ -39,7 +39,7 @@ function julia_get_models(parameters::Vector, model_types::Vector{DataType})
     sensors = Vector{ModelObs}()
     for (dataset, model_type) in zip(parameters, model_types)
         # TO DO
-        # Force correct column order with a warning
+        # Force correct column order with a warning & check names
         for row in Tables.namedtupleiterator(dataset)
             push!(sensors, model_type(row...))
         end 
