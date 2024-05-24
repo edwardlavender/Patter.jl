@@ -285,12 +285,12 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
                      cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
 
     #### Validate state 
+    # (This check is cheap)
     if !state_is_valid(state_to, state_zdim)
-       return -Inf
+        return -Inf
     end
 
-    #### Evaluate density components
-    # Calculate step length and turning angle
+    #### Evaluate step lengths and angles 
     x = state_to.x - state_from.x
     y = state_to.y - state_from.y
     length, angle = cartesian_to_polar(x, y)
@@ -300,9 +300,23 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     end
     # Calculate log(abs(determinate))
     log_det = -0.5 * log(x^2 + y^2)
-    # Approximate the normalisation constant
-    Z = logpdf_move_normalisation(state_from, state_zdim, move, t, box, nMC, cache)
     
+    #### Approximate the normalisation constant
+    # (A) Use box 
+    # * Set normalisation constant to 1.0 if the individual is within a box
+    # * `box` can be provided for 2D states & if there are no NaNs in the study area
+    # * It defines the box within which a move is always valid 
+    # * (i.e., the extent of the study area - mobility)
+    # * This code is implemented outside of logpdf_move_normalisation(): caching with the box is MUCH slower
+    if !isnothing(box) && in_bbox(box, state_from.x, state_from.y)
+        Z = 1.0
+    # (B) Run MC simulation 
+    # * Run simulation
+    # * Caching is MUCH faster when MC iterations are required
+    else 
+        Z = logpdf_move_normalisation(state_from, state_zdim, move, t, nMC, cache)
+    end 
+
     #### Evaluate density 
     logpdf_step(state_from, state_to, move, length, angle) + log_det - log(Z)
 
@@ -310,15 +324,7 @@ end
 
 
 # (Internal) normalisation constants
-function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, box, nMC::Int)
-    
-    # Set normalisation constant to 1.0 if the individual is within a box
-    # * `box` can be provided for 2D states & if there are no NaNs in the study area
-    # * It defines the box within which a move is always valid 
-    # * (i.e., the extent of the study area - mobility)
-    if !isnothing(box) && in_bbox(box, state.x, state.y)
-        return 1.0
-    end 
+function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, nMC::Int)
 
     # Run simulation 
     k = 0.0
@@ -337,8 +343,8 @@ function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMo
 end
 
 # Cached version 
-function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, box, nMC::Int, cache::LRU)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, nMC::Int, cache::LRU)
     get!(cache, state) do
-        logpdf_move_normalisation(state, state_zdim, move, t, box, nMC)
+        logpdf_move_normalisation(state, state_zdim, move, t, nMC)
     end
 end
