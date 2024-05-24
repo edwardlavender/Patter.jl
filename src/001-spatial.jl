@@ -54,22 +54,12 @@ function is_valid end
 
 # 2D case
 function is_valid(map_value::Real)
-    if isnan(map_value) 
-        false
-    else
-        true
-    end 
+    !isnan(map_value) 
 end
 
 # 3D case
 function is_valid(map_value::Real, z::Real)
-    if isnan(map_value) 
-        false
-    elseif 0.0 < z <= map_value
-        true 
-    else 
-        false
-    end 
+    !isnan(map_value) && 0.0 < z <= map_value
 end 
 
 
@@ -83,6 +73,7 @@ function ext(x::Vector{Real})
     length(x) == 4 || error("An extent is defined by four numbers.")
     (min_x = x[1], max_x = x[2], min_y = x[3], max_y = [4])
 end 
+
 
 """
 Determine whether or not a coordinate (x, y) is within a boundary box.
@@ -120,6 +111,7 @@ end
 function cartesian_to_polar(x, y)
     (length = hypot(x, y), angle = atan(y, x))
 end 
+
 
 """
 Compute the smallest absolute rotation between two angles
