@@ -109,6 +109,7 @@ end
 # Cartesian to polar coordinates
 """
 function cartesian_to_polar(x, y)
+    # (length = sqrt(x^2 + y^2), angle = atan(y, x))
     (length = hypot(x, y), angle = atan(y, x))
 end 
 
