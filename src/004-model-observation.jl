@@ -82,7 +82,7 @@ via [`Patter.simulate_obs()`](@ref).
 
 - `sensor_id`: An integer that defines the sensor (tag) ID;
 - `depth_sigma`: A float that defines the standard deviation of the normal distribution;
-- `deep_depth_eps`: A float that defines the deep truncation parameter;
+- `depth_depth_eps`: A float that defines the deep truncation parameter;
 
 This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by a normal distribution centred at this location with standard deviation `depth_sigma`: 
 
