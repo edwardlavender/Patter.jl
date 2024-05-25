@@ -7,7 +7,7 @@ using ProgressMeter: @showprogress
 export particle_filter
 
 
-# Check user inputs
+# (Internal) check_timeline_*() functions
 
 function check_timeline_entries(t_sim, t_obs)
     issubset(t_obs, t_sim) || error("There are time stamps in `yobs` not found in `timeline`.")
@@ -27,24 +27,38 @@ end
 
 
 """
-    # Systematic resampling algorithm
+    resample(w::Vector{Float64}, n::Int)
 
-    Given the weight vector w, resample a set of *indices* based on low-variance resampling algorithm from Thrun, Burgard, and Fox's "Probabilistic Robotics".
+Given a weight vector `w`, resample a set of *indices* based on low-variance resampling algorithm from Thrun, Burgard and Fox's "Probabilistic Robotics".
 
-    # Source
+# Arguments
 
-    Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
+- `w`: A `Vector{Float64}` of weights;
+- `n`: An integer that defines the number of particles;
 
-    # Example
+# Details
 
-    ```Julia
-    X = ["A", "B", "C", "D"]
-    w = [0, 0, 0.75, 0.25]
+This is an internal function that implements systematic resampling in the particle filter (see [`particle_filter()`](@ref)) and smoothing algorithms (see [`two_filter_smoother()`](@ref)). Note that for large `n`, the function is not numerically stable. 
 
-    idx = resample(w, 12)
-    X[idx]
-    ```
-    """
+# Returns
+
+- An integer vector of indices;
+
+# Example
+
+```Julia
+X = ["A", "B", "C", "D"]
+w = [0, 0, 0.75, 0.25]
+
+idx = resample(w, 12)
+X[idx]
+```
+
+# Source
+
+Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
+
+"""
 function resample(w::Vector{Float64}, n::Int = length(w))
     w = w ./ sum(w)
     idx = zeros(Int, n)
@@ -69,49 +83,50 @@ end
 """
 # Particle filter
 
-A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t ∈ 1:Tmax`.
+A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t ∈ 1:t`.
 
-# Arguments
+# Arguments (keywords)
 
-- `timeline`: A Vector{DateTime} of ordered, regularly spaced time stamps that defines the time steps for the simulation.
-- `xinit`: A Vector of [`State`](@ref) instances that defines the initial state(s) of the animal.
-- `yobs`: A Dictionary of observations (see [`assemble_yobs()`](@ref)):  
-        - Dictionary keys should match elements in `timeline`. 
-        - Each element must be a `Vector` of `Tuple`s for that time step (one for each observation/sensor).  
-        - Each `Tuple` should contain (a) the observation and (b) the model parameters (that is, a `ModelObs` instance).
-- `move`: A [`ModelMove`](@ref) instance.
-    - The movement model describes movement from one time step to the next and therefore depends implicitly on the resolution of `timeline`.
-    - The movement model should align with the [`State`] instances in `.xinit`. For example, a 2-dimensional state ([`StateXY`](@ref)) requires a corresponding movement model instance (i.e., [`ModelMoveXY`](@ref)). 
-- `n_move`: An integer that defines the number of attempts used to find a legal move. 
-    - All [`ModelMove`](@ref) sub-types contain a `map` field that defines the region(s) within which movements are allowed.
-    - Each particle is moved up to `n_move` times, until a valid movement is simulated. 
-    - Particles that fail to generate a valid move are killed. 
-- `n_record`: An integer that defines the number of particles to record at each time step.
-    - `n_record` particles are resampled at each time step and recorded in memory. 
-- `n_resample`: A number that defines the effective sample size for resampling.
-    - Particles are resampled when the effective sample size <= `n_resample`.
-- `direction:` A `String` that defines the direction of the filter.
-    - "forward" runs the filter forwards in time;
-    - "backward" runs the filter backwards in time;
+- `timeline`: A `Vector{DateTime}` of ordered, regularly spaced time stamps that defines the time steps for the simulation;
+- `xinit`: A `Vector` of [`State`](@ref) instances that defines the initial state(s) of the animal;
+- `yobs`: A Dictionary of observations:
+  - Dictionary keys should match elements in `timeline`;
+  - Each element must be a `Vector` of `Tuple`s for that time step (one for each observation/sensor);
+  - Each `Tuple` should contain (a) the observation and (b) the model parameters (that is, a [`ModelObs`](@ref) instance);
+- `move`: A [`ModelMove`](@ref) instance:
+    - The movement model describes movement from one time step to the next and therefore depends implicitly on the resolution of `timeline`;
+    - The movement model should align with the [`State`](@ref) instances in `xinit`. For example, a two-dimensional state ([`StateXY`](@ref)) requires a corresponding movement model instance (i.e., [`ModelMoveXY`](@ref)); 
+- `n_move`: An integer that defines the number of attempts used to find a legal move; 
+    - All [`ModelMove`](@ref) sub-types contain a `map` field that defines the region(s) within which movements are allowed (see [`is_valid()`](@ref));
+    - Each particle is moved up to `n_move` times, until a valid movement is simulated;
+    - Particles that fail to generate a valid move are killed;
+- `n_record`: An integer that defines the number of particles to record at each time step:
+    - `n_record` particles are resampled at each time step and recorded in memory;
+- `n_resample`: A number that defines the effective sample size for resampling:
+    - Particles are resampled when the effective sample size <= `n_resample`;
+- `direction:` A `String` that defines the direction of the filter:
+    - `"forward"` runs the filter forwards in time;
+    - `"backward"` runs the filter backwards in time;
 
 # Algorithm
 
 ## Initiation 
-The algorithm is initiated using a `Vector` of `.n_particle` [`State`](@ref)s (`.xinit`). 
+
+The algorithm is initiated using a `Vector` of `n_particle` [`State`](@ref)s (`xinit`). See [`simulate_states_init()`](@ref) to simulate initial states for the filter.  
 
 ## Movement 
 
-For every time step in the `timeline`, the internal function `Patter.simulate_move()` simulates the movement of particles away from previous states into new states using the movement model specified by `.model_move`. `Patter.simulate_move()` is an iterative wrapper for a `Patter.simulate_step()` method that simulates a new [`State`](@ref) instance from the previous [`State`](@ref), using the movement model. `Patter.simulate_move()` implements `Patter.simulate_step()` iteratively until a legal move is found (or `.n_move` is reached). Illegal moves are those that land in `NaN` locations on the `map` or, in the case of states that include a depth (`z`) component, are below the depth of the seabed. Particles that fail to generate legal moves are eventually killed by re-sampling (see below).
+For every time step in the `timeline`, the internal function [`simulate_move()`](@ref) simulates the movement of particles away from previous [`State`](@ref)s into new [`State`](@ref)s using the movement model, as specified by `move`. [`simulate_move()`](@ref) is an iterative wrapper for a [`simulate_step()`](@ref) method that simulates a new [`State`](@ref) instance from the previous [`State`](@ref). [`simulate_move()`](@ref) implements [`simulate_step()`](@ref) iteratively until a legal move is found (or `n_move` is reached). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`simulate_step()`](@ref) method is required. Illegal moves are those that land in `NaN` locations on the `map` or, in the case of [`State`](@ref)s that include a depth (`z`) component, are below the depth of the seabed (see [`is_valid()`](@ref)). Particles that fail to generate legal moves are eventually killed by re-sampling (see below).
     
 ## Likelihood 
 
-For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via `Patter.logpdf_obs()`. The maximum log-probability across all particles is recorded at each time step as an algorithm diagnostic.
+Observations are used to weight simulated particles. To simulate observations for filtering, use [`simulate_yobs()`](@ref). To assemble real-world observations for filtering, see [`assemble_yobs()`](@ref). For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via [`logpdf_obs()`](@ref). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`logpdf_obs()`](@ref) method is required. The maximum log-probability across all particles is recorded at each time step as an algorithm diagnostic.
 
 ## Resampling 
 
-Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`resample()`](@ref)), when the effective sample size is less than or equal to `.n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
+Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`resample()`](@ref)), when the effective sample size is less than or equal to `n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
 
-The algorithm continues in this way, iterating over the `timeline`, simulating, weighting and (re)sampling particles. At each time step, `.n_record` particles are saved in memory. If the function fails to converge, a [`warning`] is returned alongside the outputs up to that time step. Otherwise, the function will continue to the end of the time series.
+The algorithm continues in this way, iterating over the `timeline`, simulating, weighting and (re)sampling particles. At each time step, `n_record` particles are saved in memory. If the function fails to converge, a warning is returned alongside the outputs up to that time step. Otherwise, the function will continue to the end of the time series.
 
 # Multi-threading
 
@@ -122,16 +137,26 @@ The iteration over particles (i.e., simulated movements and likelihood evaluatio
 Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a time step at which there are no valid locations into which the algorithm can step. This may be due to data errors, incorrect assumptions, insufficient sampling effort or poor tuning-parameter settings.
 
 # Returns
-A `NamedTuple` with the following fields:
-- `timesteps`: An `Vector{Int64}` of time steps;
-- `timestamps`: The `timeline`;
-- `direction`: The `direction`;
-- `state`: A `Matrix` of [`State`](@ref)s:
-    - Each row corresponds to a particle; 
-    - Each column corresponds to the `timestep`;
-- `ess`: A `Vector{Float64}` that defines the effective sample size at each time step;
-- `maxlp`: A `Vector{Float64}` that defines the maximum log-posterior at each time step;
-- `convergence`: A `Bool` that defines whether or not the algorithm reached the end of the `timeline`;
+
+- A `NamedTuple` with the following fields:
+    - `timesteps`: An `Vector{Int64}` of time steps;
+    - `timestamps`: The `timeline`;
+    - `direction`: The `direction`;
+    - `state`: A `Matrix` of [`State`](@ref)s:
+        - Each row corresponds to a particle; 
+        - Each column corresponds to the `timestep`;
+    - `ess`: A `Vector{Float64}` that defines the effective sample size at each time step;
+    - `maxlp`: A `Vector{Float64}` that defines the maximum log-posterior at each time step;
+    - `convergence`: A `Boolian` that defines whether or not the algorithm reached the end of the `timeline`;
+
+# See also
+
+* [`State`](@ref), [`ModelMove`](@ref) and [`ModelObs`](@ref) for [`State`](@ref), movement model and observation model sub-types;
+- [`simulate_yobs()`](@ref) and [`assemble_yobs()`](@ref) to prepare observations for the particle filter;
+* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) for the internal routines used to simulate new [`State`](@ref)s;
+* [`logpdf_obs()`](@ref) methods to evaluate the log probability of observations;
+* [`two_filter_smoother()`](@ref) to implement particle smoothing;
+
 """
 function particle_filter(
     ; timeline::Vector{DateTime},
