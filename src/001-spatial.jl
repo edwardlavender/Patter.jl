@@ -11,6 +11,11 @@ Extract the value of a `GeoArray` (such as a bathymetry grid) at a pair of `x` a
 
 In `Patter.jl`, `map` is a `GeoArray` that defines the area within which movements are possible. In our applications, `map` is often a bathymetry raster that defines the depth of the seabed across the study area. `map` is an essential field in individual movement models (see [`ModelMove`](@ref)). The [`extract()`](@ref) function supports the simulation of initial states (via [`simulate_states_init()`](@ref)) and the updating of states (via [`simulate_step()`](@ref)), as required to simulate animal movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)). Individual states define, at a minimum, the individual's location (`x`, `y`) and the value of the map at that location (`map_value`), which is extracted by [`extract()`](@ref) (see [`State`](@ref)). The Coordinate Reference Systems for `map`, `x` and `y` must align for this to work (i.e., `map` should use a Universal Transverse Mercator projection with coordinates in metres). [`extract()`](@ref) is exported so that it can be used in new methods (for custom states or movement models) of these functions. The simulation of individual movements (via [`simulate_step()`])(@ref) is implemented iteratively (via [`simulate_move()`](@ref)) until a valid movement is found. `NaN` is taken to define inhospitable habitats, such as land, into which the individual cannot move (see [`is_valid()`](@ref)). It should be possible to use a `map` in another format (such as a shapefile) within these routines, with a custom [`extract()`](@ref) method that returns `NaN` in inhospitable habitats and a numeric constant otherwise. 
 
+# Returns
+
+- The value of the `GeoArray` for a coordinate pair within the bounds of `map`;
+- NaN (of the same type as `map`'s elements) for a coordinate pair beyond the bounds of `map`;
+
 # See also
 
 * [`State`](@ref) for [`State`](@ref) sub-types;
@@ -20,10 +25,6 @@ In `Patter.jl`, `map` is a `GeoArray` that defines the area within which movemen
 * [`simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
-# Returns
-
-- The value of the `GeoArray` for a coordinate pair within the bounds of `map`;
-- NaN (of the same type as `map`'s elements) for a coordinate pair beyond the bounds of `map`;
 """
 function extract(map::GeoArrays.GeoArray, x::Real, y::Real)
     # Get row and column indices from coordinates
@@ -55,6 +56,10 @@ For states with a depth (`z`) component, `is_valid(map_value, z)`, checks that `
 
 These are internal functions. They are used to validate simulated individual states (see [`State`](@ref)). Individual states (i.e., locations) are simulated via [`simulate_step()`](@ref). [`simulate_move()`](@ref) wraps [`simulate_step()`](@ref), iteratively proposing states until a valid state is found. This is required to simulate animal movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)).
 
+# Returns
+- `true` if the conditions for validity are met;
+- `false` otherwise;
+
 # See also
 
 * [`State`](@ref) for [`State`](@ref) sub-types;
@@ -64,9 +69,6 @@ These are internal functions. They are used to validate simulated individual sta
 * [`simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
-# Returns
-- `true` if the conditions for validity are met;
-- `false` otherwise;
 """ 
 function is_valid end
 
