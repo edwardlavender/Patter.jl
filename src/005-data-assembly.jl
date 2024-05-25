@@ -39,24 +39,41 @@ end
 #### Data assembly
 
 """
-    # Assemble `yobs` for the particle filter
+    assemble_yobs(datasets::Vector, model_types::Vector{DataType})
 
-Assemble a dictionary of observations (and associated model parameters) for the particle filter. 
+Assemble a dictionary of observations (and associated model parameters) for the particle filter ([`particle_filter()`](@ref)). 
 
 # Arguments
--   datasets: A Vector of DataFrames, one for each data type. Each DataFrame must contain the following columns:
-    - `timestamp`: A DateTime Vector of time stamps;
-    - `sensor_id`: A vector of sensor IDs;
-    - `obs`: The observation;
-    - Additional columns required to construct ModelObs instances (that is, model parameters);
--   model_types: A Vector of ModelObs sub-types for each dataset. 
+
+-   `datasets`: A `Vector` of `DataFrame`s, one for each data type. Each `DataFrame` must contain the following columns:
+    - `timestamp`: A `DateTime` `Vector` of time stamps;
+    - `sensor_id`: A `Vector` of sensor IDs;
+    - `obs`: A `Vector` of observations;
+    - Additional columns required to construct [`ModelObs`](@ref) instances (that is, model parameters);
+-   `model_types`: A `Vector` of [`ModelObs`](@ref) sub-types (one for each `dataset`);
 
 # Details
 
-The function iterates over datasets and models and creates a typed dictionary of timestamps. Each time step contains a vector of Tuples, with one element for each sensor that recorded an observation at that time stamp. Each element is a tuple that defines the observation and the model parameters (that is, a `ModelObs` instance).
+The function iterates over animal-tracking datasets (for example, acoustic and archival [depth] time series _for a particular individual_) and corresponding observation model types and creates a typed dictionary of time stamps for the particle filter (see [`particle_filter()`](@ref)'s `yobs` argument). Each time step contains a `Vector` of `Tuple`s, with one element for each sensor that recorded an observation at that time stamp. For example, each element might correspond to an acoustic receiver and/or the individual's archival tag. Each element is a `Tuple` that defines the observation and the corresponding observation model parameters (that is, a [`ModelObs`](@ref) instance). 
+
+# Returns
+
+- A `Dict`:
+    - Each element corresponds to a `timestamp`:
+        - Each timestamped element contains a `Vector` of `Tuples` (one for each observation):
+            - Each `Tuple` contains an observation and the corresponding [`ModelObs`](@ref) instance;
+
+# See also 
+
+* [`assemble_yobs()`](@ref) to assemble real-world datasets for the particle filter;
+* [`simulate_yobs()`](@ref) to simulate observations for the particle filter;
+* [`particle_filter()`](@ref) to implement the particle filter;
 
 """
 function assemble_yobs(datasets::Vector, model_types::Vector{DataType}) 
+
+    # TO DO
+    # * Review the speed of this function
 
     # Initialise empty dictionary 
     # yobs = Dict{DateTime, Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}}()
