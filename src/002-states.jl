@@ -87,13 +87,15 @@ end
 @doc (@doc State) StateXYZD
 
 
-"""
-    state_is_valid(state::State, zdim::Bool)
+# """
+#     state_is_valid(state::State, zdim::Bool)
 
-Determine whether or not a `state` is valid.
+# Determine whether or not a `state` is valid.
 
-See also [`State`](@ref), [`is_valid()`](@ref), 
-"""
+# This is an internal function that wraps [`is_valid()`](@ref).
+
+# See also [`State`](@ref), [`is_valid()`](@ref), 
+# """
 function state_is_valid(state::State, zdim::Bool)
     if zdim
         return is_valid(state.map_value, state.z)
