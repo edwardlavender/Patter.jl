@@ -3,23 +3,32 @@ using Dates
 export simulate_path_walk, simulate_yobs
 
 """
-# Simulate movement paths
+    simulate_path_walk(; xinit = Vector, move::ModelMove, timeline::Vector{DateTime})
 
-This function simulates discrete-time movement path(s) from a vector of initial states and random-walk movement model. 
+Simulate discrete-time movement path(s) from a `Vector` of initial [`State`](@ref)s and a random-walk movement model. 
 
-# Arguments
-- `xinit`: A Vector of [`State`](@ref)s that defines the initial state(s) for the simulation;
+# Arguments (keywords)
+
+- `xinit`: A Vector of initial [`State`](@ref)s instances;
 - `move`: A [`ModelMove`](@ref) instance;
-- `nt`: An integer that defines the number of time steps;
+- `timeline`: A `Vector{DateTime}` of ordered, regularly spaced time stamps that defines the time steps for the simulation;
 
 # Details
 
-For each initial state, a movement path is simulated. 
+[`State`](@ref) refers to the (`x`, `y`) location of an animal (alongside additional state components, if applicable). To simulate initial states, use [`simulate_states_init()`](@ref). For each initial state, [`simulate_path_walk()`](@ref) simulates a sequence of [`State`](@ref)s (i.e., a movement path) of `length(timeline)` steps using the movement model (`move`). The simulation of movement from one [`State`](@ref) into another is implemented by the internal function [`simulate_move()`](@ref), which in turn wraps [`simulate_step()`](@ref). At each time step, [`simulate_move()`](@ref) implements [`simulate_step()`](@ref) iteratively until a valid movement is identified (see [`is_valid()`](@ref)). [`simulate_step()`](@ref) is a generic function. Methods are implemented for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types but custom sub-types require a corresponding [`simulate_step()`](@ref) method. 
 
 # Returns
-A matrix:
-- Rows: paths
-- Columns: time steps
+- A `matrix` of [`State`](@ref)s:
+    - Each row represents a simulated path;
+    - Each column represents a time step along `timeline`;
+
+# See also
+
+* [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
+* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`simulate_path_walk()`](@ref) to simulate animal movement paths (via [`ModelMove`](@ref));
+* [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
+
 """
 function simulate_path_walk(; xinit = Vector, move::ModelMove, timeline::Vector{DateTime})
 
@@ -42,19 +51,31 @@ end
 
 
 """
-# Simulate observations 
+    simulate_yobs(; paths::Matrix, models::Vector{ModelObs}, timeline::Vector{DateTime})
 
-For each simulated path, simulate a dictionary of observations. 
+For a series of simulated paths, simulate a dictionary of observations. 
 
 # Arguments
-- `paths`: A Matrix of simulated paths; from [`simulate_path_walk()`](@ref);
-- `models`: A Vector of `ModelObs` instances;
-- `timeline`: A Vector{DateTime} of time stamps;
+
+- `paths`: A `Matrix` of simulated paths from [`simulate_path_walk()`](@ref);
+- `models`: A Vector of [`ModelObs`](@ref) instances;
+- `timeline`: A `Vector{DateTime}` of ordered, regularly spaced time stamps that defines the time steps for the simulation;
+
+# Details
+
+The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`](@ref)). For each simulated path, the function iterates over each step in `timeline` and simulates observations using the `Vector` of observation models. Observations are simulated by the internal generic [`simulate_obs()`](@ref) via `simulate_obs(State, model, t)`, where `t` is the time step. Methods are provided for the built-in [`State`](@ref)s and [`ModelObs`](@ref) sub-types. For custom sub-types, a corresponding [`simulate_obs()`](@ref) method is required. Simulated observations can be used in the particle filter to reconstruct the underlying movements (see [`particle_filter()`](@ref)).
 
 # Returns
-- A dictionary, with one entry for each path;
-- Each entry is a dictionary, with one entry for each time stamp;
-- Each time stamp entry is a Vector of Tuples, each comprising the observation and the associated `ModelObs` instance;
+- A `Dict`, with one entry for each path:
+    - Each entry is a `Dict`, with one entry for each time stamp;
+        - Each time stamp entry is a `Vector` of `Tuple`s, each comprising the simulated observation and the associated [`ModelObs`](@ref) instance (see also [`assemble_yobs()`](@ref));
+
+# See also 
+
+* [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
+* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`simulate_path_walk()`](@ref) to simulate animal movement paths (via [`ModelMove`](@ref));
+* [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
 
 """
 function simulate_yobs(; paths::Matrix, models::Vector{ModelObs}, timeline::Vector{DateTime})
