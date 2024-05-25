@@ -111,7 +111,7 @@ An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal,
 
 # Returns
 
-- A [`State`] instance;
+- A [`State`](@ref) instance;
 
 # See also 
 
@@ -161,7 +161,7 @@ An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal,
 
 # Returns
 
-- A `Vector` of `n` [`State`] instances;
+- A `Vector` of `n` [`State`](@ref) instances;
 
 # See also 
 
@@ -225,7 +225,7 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 
 # Returns
 
-- A [`State`] instance;
+- A [`State`](@ref) instance;
 
 # See also
 
@@ -279,7 +279,7 @@ Simulate movement from one location ([`State`](@ref)) into a new location ([`Sta
 
 [`simulate_move()`](@ref) is an internal function that uses a [`simulate_step()`](@ref) method to simulate new state proposals iteratively until a valid [`State`](@ref) is generated or `n_trial` is reached (see [`is_valid()`](@ref)). For custom [`State`](@ref)s or [`ModelMove`](@ref) sub-types, corresponding [`simulate_step()`](@ref) methods must be provided for this function. [`simulate_move()`](@ref) is used to simulate movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)).
 
-# Returns state
+# Returns
 
 - A `Tuple` that comprises the simulated [`State`](@ref) instance and the (log) weight; i.e., 
     * `([State], 0.0)` if [`State`](@ref) is valid;
