@@ -2,15 +2,15 @@ using DataFrames
 using Tables
 
 """
-# Julia from R
+# `Julia` from `R`
 
-A collection of functions that facilitate the translation of inputs from R into Julia.
+A collection of internal functions that facilitate the translation of objects from `R` into `Julia` objects.
 
 # Details
 
-* `Patter.julia_get_xinit()` gets a Vector of initial [`State`](@ref)s from a DataFrame;
-* `Patter.julia_get_model_types()` gets a Vector of [`ModelObs`](@ref) sub-types from a Vector of Strings;
-* `Patter.julia_get_models()` gets a `Vector` of [`ModelObs`](@ref) instances from a `Vector` of `DataFrame`s that contain parameters and a corresponding vector of [`ModelObs`](@ref) sub-types;
+* [`Patter.julia_get_xinit()`](@ref) gets a `Vector` of initial [`State`](@ref)s from a `DataFrame`;
+* [`Patter.julia_get_model_types()`](@ref) gets a `Vector` of [`ModelObs`](@ref) sub-types from a Vector of `String`s;
+* [`Patter.julia_get_models()`](@ref) gets a `Vector` of [`ModelObs`](@ref) instances from a `Vector` of `DataFrame`s that contain parameters and a corresponding vector of [`ModelObs`](@ref) sub-types;
 
 """
 function julia_get end 
@@ -20,6 +20,7 @@ function julia_get_xinit(state::Type{<:State}, d::DataFrame)
     fields = fieldnames(state)
     [state((d[i, Symbol(field)] for field in fields)...) for i in 1:nrow(d)]
 end 
+@doc (@doc julia_get) julia_get_xinit
 
 # d = DataFrame(map_value = [0, 1], x = [1, 2], y = [3, 4])
 # julia_get_xinit(StateXY, d)
@@ -30,6 +31,7 @@ function julia_get_model_types(models::Union{String, Vector{String}})
     models = isa(models, String) ? [models] : models
     return [getfield(Main, Symbol(model)) for model in models]
 end
+@doc (@doc julia_get) julia_get_model_types
 
 # julia_get_models(["ModelObsAcousticLogisTrunc"])
 # julia_get_models(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"])
@@ -46,3 +48,4 @@ function julia_get_models(parameters::Vector, model_types::Vector{DataType})
     end 
     sensors
 end 
+@doc (@doc julia_get) julia_get_models
