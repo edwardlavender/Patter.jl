@@ -207,7 +207,7 @@ scatter!(p, x, y, color = :red, label = false);
 display(p)
 ```
 
-<img src="fig/README-unnamed-chunk-8-J1.png" width="100%" />
+<img src="docs/figures/README-unnamed-chunk-7-J1.png" width="100%" />
 
 See `?State` and `?ModelMove` for built-in `State`s and movement models.
 Define a custom sub-type via `struct StateCustom <: Patter.State` or
@@ -357,41 +357,9 @@ mapping and visualisation. However, we can easily estimate a utilisation
 distribution from `Julia` using the wrapper `patter` `R` package via
 `RCall`. This is the `R` code:
 
-``` r
-library(patter, quietly = TRUE)
-library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
-#> spatstat.geom 3.2-9
-#> 
-#> Attaching package: 'spatstat.geom'
-#> The following object is masked from 'package:data.table':
-#> 
-#>     shift
-#> spatstat.random 3.2-3
-#> 
-#> Attaching package: 'nlme'
-#> The following object is masked from 'package:dplyr':
-#> 
-#>     collapse
-#> spatstat.explore 3.2-7
+    #> Observation window is gridded.
 
-map <- terra::rast(file.path("data", "bathymetry.tif"))
-smo <- patter:::pf_particles(.xinit = NULL, .pf_obj = "fwd")
-
-# Estimate UD
-ud <- map_dens(.map = map,
-               .coord = smo$states,
-               sigma = spatstat.explore::bw.diggle, 
-               .verbose = FALSE)
-#> Observation window is gridded.
-#> Warning: Berman-Diggle Cross-Validation criterion was minimised at right-hand end of interval [0, 744]; use argument 'hmax' to specify a wider interval
-#> for bandwidth 'sigma'
-
-# Add home range
-map_hr_home(ud, .add = TRUE)
-mtext(side = 4, "Probability density", line = -3)
-```
-
-<img src="fig/README-unnamed-chunk-14-2.png" width="100%" />
+<img src="docs/figures/README-unnamed-chunk-13-2.png" width="100%" />
 
 This basic workflow is highly customisable. You have the flexibility to
 define species-specific movement models, include any type of
