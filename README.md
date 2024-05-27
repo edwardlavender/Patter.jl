@@ -357,6 +357,22 @@ mapping and visualisation. However, we can easily estimate a utilisation
 distribution from `Julia` using the wrapper `patter` `R` package via
 `RCall`. This is the `R` code:
 
+    #> spatstat.geom 3.2-9
+    #> 
+    #> Attaching package: 'spatstat.geom'
+    #> The following object is masked from 'package:data.table':
+    #> 
+    #>     shift
+    #> The following object is masked from 'package:tictoc':
+    #> 
+    #>     shift
+    #> spatstat.random 3.2-3
+    #> 
+    #> Attaching package: 'nlme'
+    #> The following object is masked from 'package:dplyr':
+    #> 
+    #>     collapse
+    #> spatstat.explore 3.2-7
     #> Observation window is gridded.
 
 <img src="docs/figures/README-unnamed-chunk-13-2.png" width="100%" />
