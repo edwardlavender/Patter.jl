@@ -373,7 +373,7 @@ end
 """
     logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
                 model_move::ModelMove, t::Int, box, 
-                nMC::Int,
+                n_sim::Int,
                 cache::LRU)
     
 Evaluate the log probability of a movement step between two [`State`](@ref)s (`state_from` and `state_to`). 
@@ -386,12 +386,12 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
 - `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' within which movements between `state_from` and `state_to` are always (theoretically) legal. This can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances and `model_move.map` does not contain `NA`s;
-- `nMC`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
+- `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
 - `cache`: A Least Recently Used (LRU) Cache;
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) and `model_move.map` does not contain `NaN`s, a 'mobility `box`' can be provided. This is a `NamedTuple` of coordinates that define the region within which movements between two locations are always theoretically legal. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `nMC` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) and `model_move.map` does not contain `NaN`s, a 'mobility `box`' can be provided. This is a `NamedTuple` of coordinates that define the region within which movements between two locations are always theoretically legal. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -407,7 +407,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                     model_move::ModelMove, t::Int, box, nMC::Int = 100, 
+                     model_move::ModelMove, t::Int, box, n_sim::Int = 100, 
                      cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
 
     #### Validate state 
@@ -440,7 +440,7 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     # * Run simulation
     # * Caching is MUCH faster when MC iterations are required
     else 
-        Z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, nMC, cache)
+        Z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, n_sim, cache)
     end 
 
     #### Evaluate density 
@@ -451,7 +451,7 @@ end
 
 """
     logpdf_move_normalisation(state::State, state_zdim::Bool, 
-                              model_move::ModelMove, t::Int, nMC::Int, 
+                              model_move::ModelMove, t::Int, n_sim::Int, 
                               cache::LRU)
 
 Approximate the normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
@@ -462,12 +462,12 @@ Approximate the normalisation constant for the (log) probability density of move
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` contains a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `nMC`: An integer that defines the number of Monte Carlo simulations;
+- `n_sim`: An integer that defines the number of Monte Carlo simulations;
 - `cache`: A Least Recently Used (LRU) cache;
 
 # Details
 
-This function runs a Monte Carlo simulation of `nMC` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+This function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns 
 
@@ -482,11 +482,11 @@ This function runs a Monte Carlo simulation of `nMC` iterations to estimate the 
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """
-function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, nMC::Int)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, n_sim::Int)
 
     # Run simulation 
     k = 0.0
-    for i in 1:nMC
+    for i in 1:n_sim
         # Simulate an (unrestricted) step into a new location 
         pstate = simulate_step(state, model_move, t)
         # Validate the step
@@ -497,12 +497,12 @@ function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::M
 
     # Evaluate posterior mean
     # * This assumes a Beta(1, 1) prior
-    (k + 1) / (nMC + 2)
+    (k + 1) / (n_sim + 2)
 end
 
 # Cached version 
-function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, nMC::Int, cache::LRU)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, n_sim::Int, cache::LRU)
     get!(cache, state) do
-        logpdf_move_normalisation(state, state_zdim, model_move, t, nMC)
+        logpdf_move_normalisation(state, state_zdim, model_move, t, n_sim)
     end
 end
