@@ -51,14 +51,14 @@ end
 
 
 """
-    simulate_yobs(; paths::Matrix, models::Vector{ModelObs}, timeline::Vector{DateTime})
+    simulate_yobs(; paths::Matrix, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
 
 For a series of simulated paths, simulate a dictionary of observations. 
 
 # Arguments
 
 - `paths`: A `Matrix` of simulated paths from [`simulate_path_walk()`](@ref);
-- `models`: A Vector of [`ModelObs`](@ref) instances;
+- `model_obs`: A Vector of [`ModelObs`](@ref) instances;
 - `timeline`: A `Vector{DateTime}` of ordered, regularly spaced time stamps that defines the time steps for the simulation;
 
 # Details
@@ -78,11 +78,11 @@ The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`]
 * [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
 
 """
-function simulate_yobs(; paths::Matrix, models::Vector{ModelObs}, timeline::Vector{DateTime})
+function simulate_yobs(; paths::Matrix, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
     
     #### Initialise a set of dictionaries (one per path)
     # Initialise a set of dictionaries
-    entry          = dict_initialise_entry(paths[1, 1], models)
+    entry          = dict_initialise_entry(paths[1, 1], model_obs)
     yobs_by_path   = Dict{Int, Dict{DateTime, entry}}()
     # Define the initialisation object for each path entry
     path_dict_init = dict_initialise(entry)
@@ -97,7 +97,7 @@ function simulate_yobs(; paths::Matrix, models::Vector{ModelObs}, timeline::Vect
         # Simulate observations 
         for (t, state) in enumerate(path)
             yobs_by_path[i][timeline[t]] = entry[]
-            for model in models
+            for model in model_obs
                 push!(yobs_by_path[i][timeline[t]], (simulate_obs(state, model, t), model))
             end
         end

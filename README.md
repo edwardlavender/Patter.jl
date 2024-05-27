@@ -192,7 +192,7 @@ model_move = ModelMoveXY(env,
 ``` julia
 # Simulate realisation(s) of the movement model
 path = simulate_path_walk(xinit = [StateXY(67.87914, 708817.4, 6259203)], 
-                          move = model_move, 
+                          model_move = model_move, 
                           timeline = timeline)
 #> 1×720 Matrix{StateXY}:
 #>  StateXY(67.8791, 7.08817e5, 6.2592e6)  …  StateXY(21.1177, 7.04308e5, 6.26325e6)
@@ -269,8 +269,8 @@ acoustics.timestamp = DateTime.(acoustics.timestamp, "yyyy-mm-dd HH:MM:SS");
 archival.timestamp = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
 
 # Collate datasets & associated `ModelObs` instances into a typed dictionary 
-yobs = assemble_yobs([acoustics, archival], 
-                     [ModelObsAcousticLogisTrunc, ModelObsDepthNormalTrunc]);
+yobs = assemble_yobs(datasets = [acoustics, archival], 
+                     model_obs_types = [ModelObsAcousticLogisTrunc, ModelObsDepthNormalTrunc]);
 ```
 
 Of course, you do not need acoustic and archival data to implement the
@@ -304,7 +304,7 @@ xinit = simulate_states_init(state_type = StateXY,
 fwd = particle_filter(timeline = timeline,
                       xinit = xinit,
                       yobs = yobs,
-                      move = model_move,
+                      model_move = model_move,
                       n_record = 500,
                       direction = "forward");
 
@@ -319,7 +319,7 @@ xinit = simulate_states_init(state_type = StateXY,
 bwd = particle_filter(timeline = timeline,
                       xinit = xinit,
                       yobs = yobs,
-                      move = model_move,
+                      model_move = model_move,
                       n_record = 500,
                       direction = "backward");
 ```
@@ -344,8 +344,8 @@ n_particle = 100;
 smo = two_filter_smoother(timeline = timeline,
                                  xfwd = fwd.state[1:n_particle, :],
                                  xbwd = bwd.state[1:n_particle, :],
-                                 move = model_move,
-                                 nMC = 100);
+                                 model_move = model_move,
+                                 n_sim = 100);
 ```
 
 # Mapping
