@@ -111,13 +111,13 @@ Add corresponding methods to simulate observations via [`Patter.simulate_obs()`]
 
 [`Patter.simulate_obs()`](@ref) is an internal generic function that simulates observations, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
 -   `state`: A [`State`](@ref) instance;
--   `model`: A [`ModelObs`](@ref) instance;
+-   `model_obs`: A [`ModelObs`](@ref) instance;
 -   `t`: An integer that defines the time step;
 
 Methods are implemented for all built-in sub-types. Methods can be defined for new sub-types, such as `ModelObsDepthNormal`, as follows:
 ```
-function Patter.simulate_obs(state::StateXYZD, model::ModelObsDepthNormal, t::Int64)
-    dbn   = truncated(Normal(state.z, model.depth_sigma), 0, state.map_value)
+function Patter.simulate_obs(state::StateXYZD, model_obs::ModelObsDepthNormal, t::Int64)
+    dbn   = truncated(Normal(state.z, model_obs.depth_sigma), 0, state.map_value)
     rand(dbn)
 end
 ```
@@ -128,14 +128,14 @@ end
 
 [`Patter.logpdf_obs()`](@ref) is a generic function that calculates the log probability (density) of an observation, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
 -   `state`: A `State` instance;
--   `model`: A [`ModelObs`](@ref) instance;
+-   `model_obs`: A [`ModelObs`](@ref) instance;
 -   `t`: An integer that defines the time step;
 -   `obs`: The observation;
 
 Methods are implemented for all built-in sub-types. Methods can be defined for new sub-types, such as `ModelObsDepthNormal`, as follows:
 ```
-function Patter.logpdf_obs(state::State, model::ModelObsDepthNormal, t::Int64, obs::Float64)
-    dbn   = truncated(Normal(state.map_value, model.depth_sigma),
+function Patter.logpdf_obs(state::State, model_obs::ModelObsDepthNormal, t::Int64, obs::Float64)
+    dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma),
                       0.0, state.map_value)
     logpdf(dbn, obs)
   end
@@ -163,35 +163,35 @@ struct ModelObsAcousticLogisTrunc <: ModelObs
 end
 @doc (@doc ModelObs) ModelObsAcousticLogisTrunc
 
-function simulate_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64)
+function simulate_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int64)
     # Evaluate the distance between the particle and receiver
-    dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
+    dist = distance(state.x, state.y, model_obs.receiver_x, model_obs.receiver_y)
     # Define probability of detection
-    prob = ifelse(dist > model.receiver_gamma, 0.0, logistic(model.receiver_alpha + model.receiver_beta * dist))
+    prob = ifelse(dist > model_obs.receiver_gamma, 0.0, logistic(model_obs.receiver_alpha + model_obs.receiver_beta * dist))
     # Define distribution
     rand(Bernoulli(prob)) + 0
 end
 @doc (@doc ModelObs) simulate_obs
 
-function logpdf_obs(state::State, model::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
+function logpdf_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
 
     # Evaluate the distance between the particle and receiver
-    dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
+    dist = distance(state.x, state.y, model_obs.receiver_x, model_obs.receiver_y)
 
     # Calculate log probability given detection (1)
     if obs == 1
-        if dist > model.receiver_gamma 
+        if dist > model_obs.receiver_gamma 
             return -Inf
         else 
-            return -log1pexp(-(model.receiver_alpha + model.receiver_beta * dist))
+            return -log1pexp(-(model_obs.receiver_alpha + model_obs.receiver_beta * dist))
         end 
     
     # Calculate log probability given non detection (0)
     elseif obs == 0
-        if dist > model.receiver_gamma
+        if dist > model_obs.receiver_gamma
             return 0.0
         else 
-            return -log1pexp(model.receiver_alpha + model.receiver_beta * dist)
+            return -log1pexp(model_obs.receiver_alpha + model_obs.receiver_beta * dist)
         end
 
     else 
@@ -213,16 +213,16 @@ struct ModelObsDepthUniform <: ModelObs
 end
 @doc (@doc ModelObs) ModelObsDepthUniform
 
-function simulate_obs(state::State, model::ModelObsDepthUniform, t::Int64)
-    a     = max(0, state.map_value - model.depth_shallow_eps)
-    b     = state.map_value + model.depth_deep_eps
+function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
+    a     = max(0, state.map_value - model_obs.depth_shallow_eps)
+    b     = state.map_value + model_obs.depth_deep_eps
     dbn   = Uniform(a, b)
     rand(dbn)
 end 
 
-function logpdf_obs(state::State, model::ModelObsDepthUniform, t::Int64, obs::Float64)
-    a     = max(0, state.map_value - model.depth_shallow_eps)
-    b     = state.map_value + model.depth_deep_eps
+function logpdf_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64, obs::Float64)
+    a     = max(0, state.map_value - model_obs.depth_shallow_eps)
+    b     = state.map_value + model_obs.depth_deep_eps
     dbn   = Uniform(a, b)
     logpdf(dbn, obs)
 end 
@@ -243,16 +243,16 @@ end
 
 # Truncated normal depth model log probability 
 # * The probability is highest if the individual is on the seabed
-# * The individual can be up to model.depth_deep_eps deeper than the seabed
+# * The individual can be up to model_obs.depth_deep_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
-function simulate_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64)
-    dbn   = truncated(Normal(state.map_value, model.depth_sigma), 
-                      0.0, state.map_value + model.depth_deep_eps)
+function simulate_obs(state::State, model_obs::ModelObsDepthNormalTrunc, t::Int64)
+    dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma), 
+                      0.0, state.map_value + model_obs.depth_deep_eps)
     rand(dbn)
 end 
 
-function logpdf_obs(state::State, model::ModelObsDepthNormalTrunc, t::Int64, obs::Float64)
-    dbn   = truncated(Normal(state.map_value, model.depth_sigma), 
-                      0.0, state.map_value + model.depth_deep_eps)
+function logpdf_obs(state::State, model_obs::ModelObsDepthNormalTrunc, t::Int64, obs::Float64)
+    dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma), 
+                      0.0, state.map_value + model_obs.depth_deep_eps)
     logpdf(dbn, obs)
 end 
