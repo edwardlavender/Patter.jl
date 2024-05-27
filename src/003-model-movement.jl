@@ -151,7 +151,7 @@ Simulate a `Vector` of initial [`State`](@ref)s for the simulation of movement p
 
 # Arguments (keywords)
 - `state_type`: An empty [`State`](@ref) sub-type, such as `StateXY`, used for method dispatch only;
-- `move`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `n`: An integer that defines number of initial states to simulate;
 - `xlim`, `ylim`: (optional) Pairs of numbers that define the boundaries of the area within initial (`x`, `y`) coordinates are sampled;
 
@@ -323,7 +323,7 @@ end
 #### Evaluate densities
 
 """
-    logpdf_step(state_from::State, state_to::State, move::ModelMove, length, angle)
+    logpdf_step(state_from::State, state_to::State, model_move::ModelMove, length, angle)
     
 Evaluate the (unnormalised) log probability of an (unrestricted) movement step. 
 
@@ -331,13 +331,13 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 
 - `state_from`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
 - `state_to`: A [`State`](@ref) instance that defines a [`State`](@ref) into which the animal moved;
-- `move`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `length`: A float that defines the step length (i.e., the Euclidean distance between `state_from` (`x`, `y`) and `state_to` (`x`, `y`));
 - `angle`: A float that defines the angle (in polar coordinates) between `state_from` (`x`, `y`) and `state_to` (`x`, `y`);
 
 # Details
 
-[`logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`logpdf_step()`](@ref) is wrapped by [`logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`logpdf_step()`](@ref) is wrapped by [`logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -354,25 +354,25 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 """
 function logpdf_step end 
 
-function logpdf_step(state_from::StateXY, state_to::StateXY, move::ModelMoveXY, length::Float64, angle::Float64) 
-    logpdf(move.dbn_length, length) + logpdf(move.dbn_angle, angle)
+function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMoveXY, length::Float64, angle::Float64) 
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle, angle)
 end 
 
 # function logpdf_step(state_from::StateXYZ, ...)
 
-function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, move::ModelMoveXYZD, length::Float64, angle::Float64) 
+function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, length::Float64, angle::Float64) 
     # Compute change in depth 
     z_delta = state_to.z - state_from.z
     # Compute change in angle 
     angle_delta = abs_angle_difference(angle, state_from.angle)
     # Sum up logpdfs 
-    logpdf(move.dbn_length, length) + logpdf(move.dbn_angle_delta, angle_delta) + logpdf(move.dbn_z_delta, z_delta)
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle_delta, angle_delta) + logpdf(model_move.dbn_z_delta, z_delta)
 end 
 
 
 """
     logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                move::ModelMove, t::Int, box, 
+                model_move::ModelMove, t::Int, box, 
                 nMC::Int,
                 cache::LRU)
     
@@ -383,15 +383,15 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 - `state_from`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
 - `state_to`: A [`State`](@ref) instance that defines a [`State`](@ref) into which the animal moved;
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` and `state_to` contain a `z` (depth) dimension;
-- `move`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' within which movements between `state_from` and `state_to` are always (theoretically) legal. This can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances and `move.map` does not contain `NA`s;
+- `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' within which movements between `state_from` and `state_to` are always (theoretically) legal. This can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances and `model_move.map` does not contain `NA`s;
 - `nMC`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
 - `cache`: A Least Recently Used (LRU) Cache;
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) and `move.map` does not contain `NaN`s, a 'mobility `box`' can be provided. This is a `NamedTuple` of coordinates that define the region within which movements between two locations are always theoretically legal. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `nMC` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) and `model_move.map` does not contain `NaN`s, a 'mobility `box`' can be provided. This is a `NamedTuple` of coordinates that define the region within which movements between two locations are always theoretically legal. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `nMC` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -407,7 +407,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                     move::ModelMove, t::Int, box, nMC::Int = 100, 
+                     model_move::ModelMove, t::Int, box, nMC::Int = 100, 
                      cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
 
     #### Validate state 
@@ -421,7 +421,7 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     y = state_to.y - state_from.y
     length, angle = cartesian_to_polar(x, y)
     # When locations are far apart, we set -Inf density for speed
-    if cdf(move.dbn_length, length) > 0.999
+    if cdf(model_move.dbn_length, length) > 0.999
         return -Inf
     end
     # Calculate log(abs(determinate))
@@ -440,18 +440,18 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     # * Run simulation
     # * Caching is MUCH faster when MC iterations are required
     else 
-        Z = logpdf_move_normalisation(state_from, state_zdim, move, t, nMC, cache)
+        Z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, nMC, cache)
     end 
 
     #### Evaluate density 
-    logpdf_step(state_from, state_to, move, length, angle) + log_det - log(Z)
+    logpdf_step(state_from, state_to, model_move, length, angle) + log_det - log(Z)
 
 end 
 
 
 """
     logpdf_move_normalisation(state::State, state_zdim::Bool, 
-                              move::ModelMove, t::Int, nMC::Int, 
+                              model_move::ModelMove, t::Int, nMC::Int, 
                               cache::LRU)
 
 Approximate the normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
@@ -460,7 +460,7 @@ Approximate the normalisation constant for the (log) probability density of move
 
 - `state_from`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` contains a `z` (depth) dimension;
-- `move`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
 - `nMC`: An integer that defines the number of Monte Carlo simulations;
 - `cache`: A Least Recently Used (LRU) cache;
@@ -482,13 +482,13 @@ This function runs a Monte Carlo simulation of `nMC` iterations to estimate the 
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """
-function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, nMC::Int)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, nMC::Int)
 
     # Run simulation 
     k = 0.0
     for i in 1:nMC
         # Simulate an (unrestricted) step into a new location 
-        pstate = simulate_step(state, move, t)
+        pstate = simulate_step(state, model_move, t)
         # Validate the step
         if state_is_valid(pstate, state_zdim)
             k += 1.0
@@ -501,8 +501,8 @@ function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMo
 end
 
 # Cached version 
-function logpdf_move_normalisation(state::State, state_zdim::Bool, move::ModelMove, t::Int, nMC::Int, cache::LRU)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, nMC::Int, cache::LRU)
     get!(cache, state) do
-        logpdf_move_normalisation(state, state_zdim, move, t, nMC)
+        logpdf_move_normalisation(state, state_zdim, model_move, t, nMC)
     end
 end

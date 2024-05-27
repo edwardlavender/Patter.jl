@@ -4,7 +4,7 @@ using ProgressMeter: @showprogress
 export two_filter_smoother
 
 """
-    two_filter_smoother(; timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, move::ModelMove, box, nMC::Int)
+    two_filter_smoother(; timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, box, nMC::Int)
 
 A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t âˆˆ 1:T`.
 
@@ -13,7 +13,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 - `timeline`: A `Vector{DateTime}` of ordered, regularly spaced time stamps that defines the time steps for the simulation;
 - `xfwd`: A `Matrix` of [`State`](@ref)s from the forward filter (see [`particle_filter()`](@ref));
 - `xbwd`: A `Matrix` of [`State`](@ref)s from the backward filter (see [`particle_filter()`](@ref));
-- `move`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' (see [`logpdf_move()`](@ref));
 - `nMC`: An integer that defines the number of Monte Carlo simulations (see [`logpdf_move()`](@ref));
 
@@ -43,7 +43,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 Fearnhead, P., Wyncoll, D., Tawn, J., [2010](https://doi.org/10.1093/biomet/asq013). A sequential smoothing algorithm with linear computational cost. Biometrika 97, 447â€“464.
 
 """
-function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, move::ModelMove, box = nothing, nMC::Int = 100)
+function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, box = nothing, nMC::Int = 100)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
@@ -69,7 +69,7 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
         @threads for k in 1:np
             for j in 1:np
                 # Evaluate probability density of movement between locations (i.e., the weight)
-                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, move, t, box, nMC, cache))
+                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, box, nMC, cache))
             end
         end
         # Normalise weights & evaluate ESS

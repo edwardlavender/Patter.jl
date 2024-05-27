@@ -93,7 +93,7 @@ A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t â
   - Dictionary keys should match elements in `timeline`;
   - Each element must be a `Vector` of `Tuple`s for that time step (one for each observation/sensor);
   - Each `Tuple` should contain (a) the observation and (b) the model parameters (that is, a [`ModelObs`](@ref) instance);
-- `move`: A [`ModelMove`](@ref) instance:
+- `model_move`: A [`ModelMove`](@ref) instance:
     - The movement model describes movement from one time step to the next and therefore depends implicitly on the resolution of `timeline`;
     - The movement model should align with the [`State`](@ref) instances in `xinit`. For example, a two-dimensional state ([`StateXY`](@ref)) requires a corresponding movement model instance (i.e., [`ModelMoveXY`](@ref)); 
 - `n_move`: An integer that defines the number of attempts used to find a legal move; 
@@ -116,7 +116,7 @@ The algorithm is initiated using a `Vector` of `n_particle` [`State`](@ref)s (`x
 
 ## Movement 
 
-For every time step in the `timeline`, the internal function [`simulate_move()`](@ref) simulates the movement of particles away from previous [`State`](@ref)s into new [`State`](@ref)s using the movement model, as specified by `move`. [`simulate_move()`](@ref) is an iterative wrapper for a [`simulate_step()`](@ref) method that simulates a new [`State`](@ref) instance from the previous [`State`](@ref). [`simulate_move()`](@ref) implements [`simulate_step()`](@ref) iteratively until a legal move is found (or `n_move` is reached). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`simulate_step()`](@ref) method is required. Illegal moves are those that land in `NaN` locations on the `map` or, in the case of [`State`](@ref)s that include a depth (`z`) component, are below the depth of the seabed (see [`is_valid()`](@ref)). Particles that fail to generate legal moves are eventually killed by re-sampling (see below).
+For every time step in the `timeline`, the internal function [`simulate_move()`](@ref) simulates the movement of particles away from previous [`State`](@ref)s into new [`State`](@ref)s using the movement model, as specified by `model_move`. [`simulate_move()`](@ref) is an iterative wrapper for a [`simulate_step()`](@ref) method that simulates a new [`State`](@ref) instance from the previous [`State`](@ref). [`simulate_move()`](@ref) implements [`simulate_step()`](@ref) iteratively until a legal move is found (or `n_move` is reached). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`simulate_step()`](@ref) method is required. Illegal moves are those that land in `NaN` locations on the `map` or, in the case of [`State`](@ref)s that include a depth (`z`) component, are below the depth of the seabed (see [`is_valid()`](@ref)). Particles that fail to generate legal moves are eventually killed by re-sampling (see below).
     
 ## Likelihood 
 
@@ -162,7 +162,7 @@ function particle_filter(
     ; timeline::Vector{DateTime},
     xinit::Vector,
     yobs::Dict,
-    move::ModelMove,
+    model_move::ModelMove,
     n_move::Int = 100_000,
     n_record::Int = 1000,
     n_resample::Float64 = n_record * 0.5, 
@@ -228,7 +228,7 @@ function particle_filter(
         @threads for i in 1:np
             if isfinite(lw[i])
                 # Move particles
-                xnow[i], lwi = simulate_move(xpast[i], move, t, n_move)
+                xnow[i], lwi = simulate_move(xpast[i], model_move, t, n_move)
                 lw[i] += lwi
                 # Evaluate likelihoods
                 if has_obs_at_timestamp && isfinite(lw[i])
