@@ -39,18 +39,18 @@ end
 #### Data assembly
 
 """
-    assemble_yobs(datasets::Vector, model_types::Vector{DataType})
+    assemble_yobs(; datasets::Vector, model_obs_types::Vector{DataType})
 
 Assemble a dictionary of observations (and associated model parameters) for the particle filter ([`particle_filter()`](@ref)). 
 
-# Arguments
+# Arguments (keywords)
 
 -   `datasets`: A `Vector` of `DataFrame`s, one for each data type. Each `DataFrame` must contain the following columns:
     - `timestamp`: A `DateTime` `Vector` of time stamps;
     - `sensor_id`: A `Vector` of sensor IDs;
     - `obs`: A `Vector` of observations;
     - Additional columns required to construct [`ModelObs`](@ref) instances (that is, model parameters);
--   `model_types`: A `Vector` of [`ModelObs`](@ref) sub-types (one for each `dataset`);
+-   `model_obs_types`: A `Vector` of [`ModelObs`](@ref) sub-types (one for each `dataset`);
 
 # Details
 
@@ -70,24 +70,24 @@ The function iterates over animal-tracking datasets (for example, acoustic and a
 * [`particle_filter()`](@ref) to implement the particle filter;
 
 """
-function assemble_yobs(datasets::Vector, model_types::Vector{DataType}) 
+function assemble_yobs(; datasets::Vector, model_obs_types::Vector{DataType}) 
 
     # TO DO
     # * Review the speed of this function
 
     # Initialise empty dictionary 
     # yobs = Dict{DateTime, Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}}()
-    entry = dict_initialise_entry(datasets, model_types)
+    entry = dict_initialise_entry(datasets, model_obs_types)
     yobs = dict_initialise(entry)
     entry = entry[]
 
     # Iterate over datasets/models
-    for (dataset, model_type) in zip(datasets, model_types)
+    for (dataset, model_obs_type) in zip(datasets, model_obs_types)
     
         # Define dataset parameters
         parameters = select(dataset, Not([:timestamp, :obs]))
-        # Enforce a column order that matches the components of model_type
-        parameters = parameters[:, [col for col in fieldnames(model_type)]] 
+        # Enforce a column order that matches the components of model_obs_type
+        parameters = parameters[:, [col for col in fieldnames(model_obs_type)]] 
     
         # Iterate over time steps & add observations & ModelObs objects
         for (timestamp, obs, row) in zip(dataset.timestamp, dataset.obs, Tables.namedtupleiterator(parameters))
@@ -96,7 +96,7 @@ function assemble_yobs(datasets::Vector, model_types::Vector{DataType})
                 yobs[timestamp] = entry
             end  
             # Update dictionary 
-            push!(yobs[timestamp], (obs, model_type(row...)))
+            push!(yobs[timestamp], (obs, model_obs_type(row...)))
         end 
     
     end 
