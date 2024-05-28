@@ -187,11 +187,11 @@ function particle_filter(
 
     #### Define filter direction
     if direction == "forward"
-        start = 1
-        timesteps = start:nt
+        start = 1; finish = nt;
+        timesteps = start:finish
     elseif direction == "backward"
-        start = nt
-        timesteps = start:-1:1
+        start = nt; finish = 1;
+        timesteps = start:-1:finish
     else 
         error("`direction` must be \"forward\" or \"backward\".")
     end 
@@ -244,9 +244,11 @@ function particle_filter(
         #### (optional) Resample particles
         # Validate weights
         if !any(isfinite.(lw))
-           @warn  "Weights from filter ($start -> $t) are zero at time $t: returning outputs from $(min(start, timesteps[t - 1])):$(max(start, timesteps[t - 1]))."
-           pos = sort([start, t - 1])
-           pos = pos[1]:pos[2]
+           stop = ifelse(direction == "forward", t - 1, t + 1)
+           pos  = sort([start, stop])
+           pos  = pos[1]:pos[2]
+           @warn  "Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos))."
+
            return (timesteps    = collect(pos), 
                    timestamps   = timeline[pos], 
                    state        = xout[:, pos], 
