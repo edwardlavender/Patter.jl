@@ -188,10 +188,10 @@ function particle_filter(
     #### Define filter direction
     if direction == "forward"
         start = 1
-        timesteps = 2:nt
+        timesteps = start:nt
     elseif direction == "backward"
         start = nt
-        timesteps = (nt - 1):-1:1
+        timesteps = start:-1:1
     else 
         error("`direction` must be \"forward\" or \"backward\".")
     end 
@@ -205,15 +205,12 @@ function particle_filter(
     lw = zeros(np)
     # Output particles
     xout = Matrix{eltype(xinit)}(undef, nr, nt);
-    xout[:, start] .= xinit[1:nr]
 
     #### Define diagnostic objects
     # Output ESS vector
     ess = zeros(nt)
-    ess[start] = np
     # Output maxlp vector
     maxlp = zeros(nt)
-    maxlp[start] = NaN
    
     #### Run filter
     @showprogress desc = "Running filter..." for t in timesteps
@@ -228,8 +225,10 @@ function particle_filter(
         @threads for i in 1:np
             if isfinite(lw[i])
                 # Move particles
-                xnow[i], lwi = simulate_move(xpast[i], model_move, t, n_move)
-                lw[i] += lwi
+                if t != start
+                    xnow[i], lwi = simulate_move(xpast[i], model_move, t, n_move)
+                    lw[i] += lwi
+                end 
                 # Evaluate likelihoods
                 if has_obs_at_timestamp && isfinite(lw[i])
                     for (obs, model) in yobs_at_timestamp
@@ -245,7 +244,7 @@ function particle_filter(
         #### (optional) Resample particles
         # Validate weights
         if !any(isfinite.(lw))
-           @warn "Weights from filter ($start -> $t) are zero at time $t: returning outputs up to $(t - 1)."
+           @warn  "Weights from filter ($start -> $t) are zero at time $t: returning outputs from $(min(start, timesteps[t - 1])):$(max(start, timesteps[t - 1]))."
            pos = sort([start, t - 1])
            pos = pos[1]:pos[2]
            return (timesteps    = collect(pos), 
