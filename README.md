@@ -152,7 +152,7 @@ Random.seed!(123);
 
 # Check threads
 Threads.nthreads()
-#> 1
+#> 8
 ```
 
 Third, we define the properties of our study area; namely, a `GeoArray`
@@ -357,23 +357,27 @@ mapping and visualisation. However, we can easily estimate a utilisation
 distribution from `Julia` using the wrapper `patter` `R` package via
 `RCall`. This is the `R` code:
 
-    #> spatstat.geom 3.2-9
-    #> 
-    #> Attaching package: 'spatstat.geom'
-    #> The following object is masked from 'package:data.table':
-    #> 
-    #>     shift
-    #> The following object is masked from 'package:tictoc':
-    #> 
-    #>     shift
-    #> spatstat.random 3.2-3
-    #> 
-    #> Attaching package: 'nlme'
-    #> The following object is masked from 'package:dplyr':
-    #> 
-    #>     collapse
-    #> spatstat.explore 3.2-7
-    #> Observation window is gridded.
+``` r
+# Load & attach packages
+library(patter, quietly = TRUE)
+library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
+
+# Read map 
+map <- terra::rast(file.path("data", "bathymetry.tif"))
+
+# Convert smoothed particles from `Julia` into a `pf_particles` object
+smo <- patter:::pf_particles(.xinit = NULL, .pf_obj = "smo")
+
+# Estimate UD
+ud <- map_dens(.map = map,
+               .coord = smo$states,
+               sigma = spatstat.explore::bw.diggle, 
+               .verbose = FALSE)
+
+# Add home range
+map_hr_home(ud, .add = TRUE)
+mtext(side = 4, "Probability density", line = -3)
+```
 
 <img src="docs/figures/README-unnamed-chunk-13-2.png" width="100%" />
 
@@ -391,7 +395,7 @@ queries.
 
 - The [online](https://edwardlavender.github.io/Patter.jl/) package
   documentation;
-- `?patter::particle_filgter()` for information on specific functions;
+- `?patter::particle_filter()` for information on specific functions;
 
 **For additional resources**, see the documentation for the
 [`patter`](https://github.com/edwardlavender/patter) `R` package.
