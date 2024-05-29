@@ -248,7 +248,6 @@ function particle_filter(
            pos  = sort([start, stop])
            pos  = pos[1]:pos[2]
            @warn  "Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos))."
-
            return (timesteps    = collect(pos), 
                    timestamps   = timeline[pos], 
                    state        = xout[:, pos], 
