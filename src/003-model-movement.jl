@@ -94,13 +94,13 @@ end
 #### Initialise states
 
 """
-    simulate_state_init(state_type::Type{<:State}, model::ModelMove, xlim, ylim)
+    simulate_state_init(state_type::Type{<:State}, model_move::ModelMove, xlim, ylim)
 
 Simulate a (tentative) initial [`State`](@ref) for an animal.
 
 # Arguments:
 -   `state_type`: An empty [`State`](@ref) sub-type, such as [`StateXY`](@ref), used for method dispatch only;
--   `model`: A [`ModelMove`](@ref) instance;
+-   `model_move`: A [`ModelMove`](@ref) instance;
 -   `xlim`, `ylim`: Pairs of numbers that define the boundaries of the area within which initial (`x`, `y`) coordinates are sampled;
 
 # Details
@@ -125,27 +125,27 @@ An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal,
 """
 function simulate_state_init end 
 
-function simulate_state_init(state_type::Type{StateXY}, model::ModelMove, xlim, ylim)
+function simulate_state_init(state_type::Type{StateXY}, model_move::ModelMove, xlim, ylim)
     x = rand() * (xlim[2] - xlim[1]) + xlim[1]
     y = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    map_value = extract(model.map, x, y)
+    map_value = extract(model_move.map, x, y)
     StateXY(map_value, x, y)
 end
 
 # function simulate_state_init(state_type::Type{StateXYZ})
 # * TO DO
 
-function simulate_state_init(state_type::Type{StateXYZD}, model::ModelMove, xlim, ylim)
+function simulate_state_init(state_type::Type{StateXYZD}, model_move::ModelMove, xlim, ylim)
     x         = rand() * (xlim[2] - xlim[1]) + xlim[1]
     y         = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    map_value = extract(model.map, x, y)
+    map_value = extract(model_move.map, x, y)
     z         = rand() * map_value
     angle     = rand() * 2 * pi
     StateXYZD(map_value, x, y, z, angle)
 end 
 
 """
-    simulate_states_init(; state_type::Type{<:State}, model::ModelMove, n::Int, xlim, ylim)
+    simulate_states_init(; state_type::Type{<:State}, model_move::ModelMove, n::Int, xlim, ylim)
 
 Simulate a `Vector` of initial [`State`](@ref)s for the simulation of movement paths.
 
@@ -173,10 +173,10 @@ An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal,
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use initial [`State`](@ref)s to simulate animal movement paths;
 
 """
-function simulate_states_init(; state_type::Type{<:State}, model::ModelMove, n::Int, xlim = nothing, ylim = nothing)
+function simulate_states_init(; state_type::Type{<:State}, model_move::ModelMove, n::Int, xlim = nothing, ylim = nothing)
 
     # (optional) Define xlim and ylim
-    bb = GeoArrays.bbox(model.map)
+    bb = GeoArrays.bbox(model_move.map)
     if isnothing(xlim)
         xlim = (bb.min_x, bb.max_x)
     end
@@ -189,7 +189,7 @@ function simulate_states_init(; state_type::Type{<:State}, model::ModelMove, n::
     xinit = state_type[]
     zdim  = hasfield(state_type, :z)
     while length(xinit) < n
-        pinit = simulate_state_init(state_type, model, xlim, ylim)
+        pinit = simulate_state_init(state_type, model_move, xlim, ylim)
         valid = state_is_valid(pinit, zdim)
         if valid
             push!(xinit, pinit)
@@ -209,14 +209,14 @@ end
 # * The user must provide a new method for new State types
 
 """
-    simulate_step(state::State, model::ModelMove, t::Int64)
+    simulate_step(state::State, model_move::ModelMove, t::Int64)
 
 Simulate a (tentative) step from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
 
 # Arguments
 
 - `state`: A [`State`](@ref) instance that defines the animal's previous [`State`](@ref);
-- `model`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
 
 # Details
@@ -239,12 +239,12 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 function simulate_step end
 
 # RW in X and Y
-function simulate_step(state::StateXY, model::ModelMoveXY, t::Int64)
-    length    = rand(model.dbn_length)
-    angle     = rand(model.dbn_angle)
+function simulate_step(state::StateXY, model_move::ModelMoveXY, t::Int64)
+    length    = rand(model_move.dbn_length)
+    angle     = rand(model_move.dbn_angle)
     x         = state.x + length * cos(angle)
     y         = state.y + length * sin(angle)
-    map_value = extract(model.map, x, y)
+    map_value = extract(model_move.map, x, y)
     StateXY(map_value, x, y)
 end 
 
@@ -252,26 +252,26 @@ end
 # * TO DO
 
 # CRW in X, Y, Z 
-function simulate_step(state::StateXYZD, model::ModelMoveXYZD, t::Int64)
-    length = rand(model.dbn_length)
-    angle  = state.angle + rand(model.dbn_angle_delta)
+function simulate_step(state::StateXYZD, model_move::ModelMoveXYZD, t::Int64)
+    length = rand(model_move.dbn_length)
+    angle  = state.angle + rand(model_move.dbn_angle_delta)
     x      = state.x + length * cos(angle)
     y      = state.y + length * sin(angle)
-    z      = state.z + rand(model.dbn_z_delta)
-    map_value = extract(model.map, x, y)
+    z      = state.z + rand(model_move.dbn_z_delta)
+    map_value = extract(model_move.map, x, y)
     StateXYZD(map_value, x, y, z, angle)
 end 
 
 
 """
-    simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real)
+    simulate_move(state::State, model_move::ModelMove, t::Int64, n_trial::Real)
 
 Simulate movement from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
 
 # Arguments
 
 - `state`: A [`State`](@ref) instance that defines the animal's previous [`State`](@ref);
-- `model`: A [`ModelMove`](@ref) instance;
+- `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
 - `n_trial`: A number that defines the number of attempts to simulate a valid [`State`](@ref);
 
@@ -294,7 +294,7 @@ Simulate movement from one location ([`State`](@ref)) into a new location ([`Sta
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
 """
-function simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real = 100_000)
+function simulate_move(state::State, model_move::ModelMove, t::Int64, n_trial::Real = 100_000)
     # Determine dimension of movement model
     # * The depth dimension (if present) must be named `z`
     zdim  = hasfield(typeof(state), :z)
@@ -302,7 +302,7 @@ function simulate_move(state::State, model::ModelMove, t::Int64, n_trial::Real =
     trial = 1
     while trial <= n_trial
         # Simulate a new state
-        pstate = simulate_step(state, model, t)
+        pstate = simulate_step(state, model_move, t)
         # Identify proposal validity 
         valid = state_is_valid(pstate, zdim)
         # Return valid proposals and the (log) weight (log(1))
