@@ -241,22 +241,23 @@ function particle_filter(
         #### Record diagnostics
         maxlp[t] = maximum(lw)
 
-        #### (optional) Resample particles
-        # Validate weights
+        #### Validate weights
         if !any(isfinite.(lw))
-           # stop = ifelse(direction == "forward", t - 1, t + 1)
-           stop = t
-           pos  = sort([start, stop])
-           pos  = pos[1]:pos[2]
-           @warn  "Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf."
-           return (timesteps    = collect(pos), 
-                   timestamps   = timeline[pos], 
-                   state        = xout[:, pos], 
-                   direction    = direction, 
-                   ess          = ess[pos], 
-                   maxlp        = maxlp[pos], 
-                   convergence  = false)
-        end
+            # stop = ifelse(direction == "forward", t - 1, t + 1)
+            stop = t
+            pos  = sort([start, stop])
+            pos  = pos[1]:pos[2]
+            @warn  "Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf."
+            return (timesteps    = collect(pos), 
+                    timestamps   = timeline[pos], 
+                    state        = xout[:, pos], 
+                    direction    = direction, 
+                    ess          = ess[pos], 
+                    maxlp        = maxlp[pos], 
+                    convergence  = false)
+         end
+
+        #### Resample particles
         # Normalise weights
         lw_norm = lw .- logsumexp(lw)
         # Evaluate ESS
