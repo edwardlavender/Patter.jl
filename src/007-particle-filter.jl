@@ -120,7 +120,7 @@ For every time step in the `timeline`, the internal function [`simulate_move()`]
     
 ## Likelihood 
 
-Observations are used to weight simulated particles. To simulate observations for filtering, use [`simulate_yobs()`](@ref). To assemble real-world observations for filtering, see [`assemble_yobs()`](@ref). For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via [`logpdf_obs()`](@ref). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`logpdf_obs()`](@ref) method is required. The maximum log-probability across all particles is recorded at each time step as an algorithm diagnostic.
+Observations are used to weight simulated particles. To simulate observations for filtering, use [`simulate_yobs()`](@ref). To assemble real-world observations for filtering, see [`assemble_yobs()`](@ref). For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via [`logpdf_obs()`](@ref). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`logpdf_obs()`](@ref) method is required. The maximum weight across all particles (`maxlp`) is recorded at each time step as an algorithm diagnostic. (This metric can be intepreted as the maximum log-posterior if resampling is implemented at every time step.)
 
 ## Resampling 
 
@@ -146,7 +146,7 @@ Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a 
         - Each row corresponds to a particle; 
         - Each column corresponds to the `timestep`;
     - `ess`: A `Vector{Float64}` that defines the effective sample size at each time step;
-    - `maxlp`: A `Vector{Float64}` that defines the maximum log-posterior at each time step;
+    - `maxlp`: A `Vector{Float64}` that defines the maximum log weight at each time step (i.e., the maximum log-posterior, if resampling is implemented at every time step);
     - `convergence`: A `Boolian` that defines whether or not the algorithm reached the end of the `timeline`;
 
 # See also
@@ -165,7 +165,7 @@ function particle_filter(
     model_move::ModelMove,
     n_move::Int = 100_000,
     n_record::Int = 1000,
-    n_resample::Float64 = n_record * 0.5, 
+    n_resample::Float64 = Float64(n_record), 
     direction::String = "forward")
 
     #### Define essential parameters
