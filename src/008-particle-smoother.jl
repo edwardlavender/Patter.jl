@@ -56,8 +56,7 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
     xout[:, 1] .= xbwd[:, 1]
     xout[:, end] .= xfwd[:, end]
     np, nt = size(xout)
-    # Vectors for weights and ESS
-    w = ones(np)
+    # ESS vector
     ess = zeros(nt)
     ess[1] = NaN
     ess[nt] = NaN 
@@ -66,6 +65,7 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
 
     #### Run two-filter formula
     @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
+        w = zeros(np)
         @threads for k in 1:np
             for j in 1:np
                 # Evaluate probability density of movement between locations (i.e., the weight)
