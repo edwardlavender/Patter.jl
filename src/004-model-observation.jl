@@ -66,7 +66,7 @@ z_t & \\text{if } b(\\textit{\\textbf{s}}_t) - \\text{depth\\_shallow\\_eps} \\l
 \\end{cases}
 ```
 
-where ``y_t^{(D)}`` is the observed depth, ``b(\\textit{\\textbf{s}}_t)`` is the bathymetric depth in location ``\\textit{\\textbf{s}}_t`` and ``z_t`` is a constant.
+where ``y_t^{(D)}`` is the observed depth, ``b(\\textit{\\textbf{s}}_t)`` is the bathymetric depth in location ``\\textit{\\textbf{s}}_t`` and ``z_t`` is a constant. If `depth_shallow_eps` and `depth_deep_eps` are zero, the individual's depth is required to match the bathymetric depth.
 
 We can simulate observations from this model as follows:
 
@@ -74,7 +74,7 @@ We can simulate observations from this model as follows:
 y_t^{(D)} |  \\textit{\\textbf{s}}_t \\sim \\text{Uniform}(b(\\textit{\\textbf{s}}_t) + \\text{depth\\_deep\\_eps}, \\text{min}(b(\\textit{\\textbf{s}}_t) - \\text{depth\\_shallow\\_eps}, 0))
 ```
 
-via [`Patter.simulate_obs()`](@ref).
+via [`Patter.simulate_obs()`](@ref). If `depth_shallow_eps` and `depth_deep_eps` are set to zero, the [`Patter.simulate_obs()`](@ref) method simply returns the bathymetric depth (`state.map_value`).
 
 ## `ModelObsDepthNormalTrunc`
 
@@ -214,6 +214,9 @@ end
 @doc (@doc ModelObs) ModelObsDepthUniform
 
 function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
+    if model_obs.depth_shallow_eps == model_obs.depth_deep_eps == 0.0
+        return state.map_value
+    end 
     a     = max(0, state.map_value - model_obs.depth_shallow_eps)
     b     = state.map_value + model_obs.depth_deep_eps
     dbn   = Uniform(a, b)
@@ -221,6 +224,13 @@ function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
 end 
 
 function logpdf_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64, obs::Float64)
+    if model_obs.depth_shallow_eps == model_obs.depth_deep_eps == 0.0
+        if abs(state.map_value - obs) < 1.0e-7
+            return 0.0
+        else
+            return -Inf
+        end 
+    end 
     a     = max(0, state.map_value - model_obs.depth_shallow_eps)
     b     = state.map_value + model_obs.depth_deep_eps
     dbn   = Uniform(a, b)
