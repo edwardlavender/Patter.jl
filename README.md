@@ -152,7 +152,7 @@ Random.seed!(123);
 
 # Check threads
 Threads.nthreads()
-#> 8
+#> 1
 ```
 
 Third, we define the properties of our study area; namely, a `GeoArray`
@@ -196,6 +196,9 @@ path = simulate_path_walk(xinit = [StateXY(67.87914, 708817.4, 6259203)],
                           timeline = timeline)
 #> 1×720 Matrix{StateXY}:
 #>  StateXY(67.8791, 7.08817e5, 6.2592e6)  …  StateXY(21.1177, 7.04308e5, 6.26325e6)
+```
+
+``` julia
 
 # Extract x and y coordinates for visualisation
 x = [path[1, i].x for i in 1:size(path, 2)];
@@ -242,6 +245,9 @@ first(acoustics, 6)
 #>    5 │ 2016-03-17 01:50:00         11      0   7.07542e5   6.26771e6           ⋯
 #>    6 │ 2016-03-17 01:50:00         12      0   7.10042e5   6.26731e6
 #>                                                                3 columns omitted
+```
+
+``` julia
 
 # Read archival (depth) observations
 archival = CSV.read(joinpath("data", "archival.csv"), DataFrame);
@@ -295,8 +301,8 @@ time step:
 ``` julia
 # Simulate initial states for the forward filter
 xinit = simulate_states_init(state_type = StateXY,
-                             model = model_move, 
-                             n = 100_000, 
+                             model_move = model_move, 
+                             n = 200_000, 
                              xlim = (705842.1, 710642.1), 
                              ylim = (6249007, 6269707));
 
@@ -310,8 +316,8 @@ fwd = particle_filter(timeline = timeline,
 
 # Simulate initial states for the backward filter
 xinit = simulate_states_init(state_type = StateXY, 
-                             model = model_move,
-                             n = 100_000, 
+                             model_move = model_move,
+                             n = 200_000, 
                              xlim = (705842.1, 710642.1), 
                              ylim = (6249007, 6269707));
 
@@ -372,7 +378,7 @@ smo <- patter:::pf_particles(.xinit = NULL, .pf_obj = "smo")
 ud <- map_dens(.map = map,
                .coord = smo$states,
                sigma = spatstat.explore::bw.diggle, 
-               .verbose = FALSE)
+               .verbose = FALSE)$ud
 
 # Add home range
 map_hr_home(ud, .add = TRUE)
