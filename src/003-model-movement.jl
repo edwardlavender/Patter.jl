@@ -421,6 +421,13 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     y = state_to.y - state_from.y
     length, angle = cartesian_to_polar(x, y)
     # When locations are far apart, we set -Inf density for speed
+    # * cdf() is used here b/c it works if the user does not set a maximum speed
+    # * TO DO
+    # * Consider maximum(model_move.dbn_length) or insupport() which may be faster
+    # * Consider NearestNeighbors.jl to build a kd tree:
+    # * - Provide locations
+    # * - Get index of particles within mobility
+    # * - This may improve speed by eliminating the need to iterative over all particles in the smoother 
     if cdf(model_move.dbn_length, length) > 0.999
         return -Inf
     end

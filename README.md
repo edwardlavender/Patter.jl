@@ -21,6 +21,10 @@ Scheidegger](https://www.eawag.ch/de/ueber-uns/portraet/organisation/mitarbeiten
 [`patter`](https://github.com/edwardlavender/patter)
 [`R`](https://www.r-project.org) package.
 
+> **Note:** `Patter.jl` is a new `Julia` package. Like all new packages,
+> you should use it with a degree of caution. Please share feedback and
+> issues.
+
 # Highlights
 
 `Patter.jl` is designed to reconstruct movement paths and emergent
