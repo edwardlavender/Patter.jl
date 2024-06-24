@@ -156,7 +156,7 @@ Random.seed!(123);
 
 # Check threads
 Threads.nthreads()
-#> 1
+#> 8
 ```
 
 Third, we define the properties of our study area; namely, a `GeoArray`
@@ -371,7 +371,8 @@ distribution from `Julia` using the wrapper `patter` `R` package via
 # Load & attach packages
 library(patter, quietly = TRUE)
 library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
-
+op <- options(terra.pal = rev(terrain.colors(256)))
+              
 # Read map 
 map <- terra::rast(file.path("data", "bathymetry.tif"))
 
@@ -390,6 +391,11 @@ mtext(side = 4, "Probability density", line = -3)
 ```
 
 <img src="docs/figures/README-unnamed-chunk-13-2.png" width="100%" />
+
+``` r
+
+options(op)
+```
 
 This basic workflow is highly customisable. You have the flexibility to
 define species-specific movement models, include any type of
