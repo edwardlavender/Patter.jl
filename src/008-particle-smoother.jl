@@ -64,7 +64,8 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
     cache = LRU{eltype(xfwd), Float64}(maxsize = np)
 
     #### Run two-filter formula
-    @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
+    # @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
+    for t in 2:(nt - 1)
         w = zeros(np)
         @threads for k in 1:np
             for j in 1:np

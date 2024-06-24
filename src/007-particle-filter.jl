@@ -213,8 +213,8 @@ function particle_filter(
     maxlp = zeros(nt)
    
     #### Run filter
-    @showprogress desc = "Running filter..." for t in timesteps
-
+    # @showprogress desc = "Running filter..." for t in timesteps
+    for t in timesteps
         # println(t)
 
         #### Move particles & compute weights
