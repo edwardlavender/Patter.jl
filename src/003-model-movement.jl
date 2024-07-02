@@ -474,7 +474,7 @@ Approximate the normalisation constant for the (log) probability density of move
 
 # Details
 
-This internal function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+This internal function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another, assuming a Binomial distribution with a Beta(1, 1) prior. The Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns 
 
