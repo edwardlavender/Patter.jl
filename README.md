@@ -156,7 +156,7 @@ Random.seed!(123);
 
 # Check threads
 Threads.nthreads()
-#> 8
+#> 1
 ```
 
 Third, we define the properties of our study area; namely, a `GeoArray`
@@ -200,9 +200,6 @@ path = simulate_path_walk(xinit = [StateXY(67.87914, 708817.4, 6259203)],
                           timeline = timeline)
 #> 1×720 Matrix{StateXY}:
 #>  StateXY(67.8791, 7.08817e5, 6.2592e6)  …  StateXY(21.1177, 7.04308e5, 6.26325e6)
-```
-
-``` julia
 
 # Extract x and y coordinates for visualisation
 x = [path[1, i].x for i in 1:size(path, 2)];
@@ -249,9 +246,6 @@ first(acoustics, 6)
 #>    5 │ 2016-03-17 01:50:00         11      0   7.07542e5   6.26771e6           ⋯
 #>    6 │ 2016-03-17 01:50:00         12      0   7.10042e5   6.26731e6
 #>                                                                3 columns omitted
-```
-
-``` julia
 
 # Read archival (depth) observations
 archival = CSV.read(joinpath("data", "archival.csv"), DataFrame);
@@ -371,6 +365,13 @@ distribution from `Julia` using the wrapper `patter` `R` package via
 # Load & attach packages
 library(patter, quietly = TRUE)
 library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
+#> Warning: package 'spatstat.explore' was built under R version
+#> 4.3.3
+#> Warning: package 'spatstat.data' was built under R version 4.3.3
+#> Warning: package 'spatstat.univar' was built under R version 4.3.3
+#> Warning: package 'spatstat.geom' was built under R version 4.3.3
+#> Warning: package 'spatstat.random' was built under R version 4.3.3
+#> Warning: package 'nlme' was built under R version 4.3.3
 op <- options(terra.pal = rev(terrain.colors(256)))
               
 # Read map 
@@ -430,10 +431,10 @@ To cite `patter` in publications, please use:
 - Lavender, E. et al. (2023). An integrative modelling framework for
   passive acoustic telemetry. Methods in Ecology and Evolution.
   <https://doi.org/10.1111/2041-210X.14193>
-- Lavender, E. et al. (in prep). Particle filters for animal movement
+- Lavender, E. et al. (in prep). Particle algorithms for animal movement
   modelling in autonomous receiver networks.
-- Lavender, E. et al. (in prep). Particle filters for animal tracking in
-  `R` and `Julia`.
+- Lavender, E. et al. (in prep). Particle algorithms for animal tracking
+  in `R` and `Julia`. <https://doi.org/10.1101/2024.07.30.605733>
 - Lavender, E. et al. (in prep). Particle filtering reveals patterns of
   space use in a Critically Endangered elasmobranch.
 
