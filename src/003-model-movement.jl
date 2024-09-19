@@ -332,6 +332,7 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 - `state_from`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
 - `state_to`: A [`State`](@ref) instance that defines a [`State`](@ref) into which the animal moved;
 - `model_move`: A [`ModelMove`](@ref) instance;
+- `t`: An integer that defines the time step;
 - `length`: A float that defines the step length (i.e., the Euclidean distance between `state_from` (`x`, `y`) and `state_to` (`x`, `y`));
 - `angle`: A float that defines the angle (in polar coordinates) between `state_from` (`x`, `y`) and `state_to` (`x`, `y`);
 
@@ -354,13 +355,13 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 """
 function logpdf_step end 
 
-function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMoveXY, length::Float64, angle::Float64) 
+function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMoveXY, t::Int64, length::Float64, angle::Float64) 
     logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle, angle)
 end 
 
 # function logpdf_step(state_from::StateXYZ, ...)
 
-function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, length::Float64, angle::Float64) 
+function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, t::Int64, length::Float64, angle::Float64) 
     # Compute change in depth 
     z_delta = state_to.z - state_from.z
     # Compute change in angle 
@@ -451,7 +452,7 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     end 
 
     #### Evaluate density 
-    logpdf_step(state_from, state_to, model_move, length, angle) + log_det - log(Z)
+    logpdf_step(state_from, state_to, model_move, t, length, angle) + log_det - log(Z)
 
 end 
 
