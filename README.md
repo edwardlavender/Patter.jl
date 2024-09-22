@@ -1,5 +1,5 @@
 
-# `patter.jl`: particle algorithms for animal movement
+# `Patter.jl`: particle algorithms for animal movement
 
 **Particle filters, smoothers and sampling algorithms for animal
 movement modelling in [`Julia`](https://julialang.org)**
@@ -189,6 +189,7 @@ angles:
 ``` julia
 # Formulate a movement model
 model_move = ModelMoveXY(env, 
+                         750.0,
                          truncated(Gamma(1, 250.0), upper = 750.0), 
                          Uniform(-pi, pi));
 ```
@@ -365,8 +366,7 @@ distribution from `Julia` using the wrapper `patter` `R` package via
 # Load & attach packages
 library(patter, quietly = TRUE)
 library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
-#> Warning: package 'spatstat.explore' was built under R version
-#> 4.3.3
+#> Warning: package 'spatstat.explore' was built under R version 4.3.3
 #> Warning: package 'spatstat.data' was built under R version 4.3.3
 #> Warning: package 'spatstat.univar' was built under R version 4.3.3
 #> Warning: package 'spatstat.geom' was built under R version 4.3.3
