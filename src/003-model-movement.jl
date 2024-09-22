@@ -17,12 +17,13 @@ export simulate_states_init
 
 [`ModelMove`](@ref) sub-types define the components of different kinds of movement model. The following sub-types are built-in:
 
--   `ModelMoveXY(map, dbn_length, dbn_angle)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
--   `ModelMoveXYZD(map, dbn_length, dbn_angle_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   `ModelMoveXY(map, mobility, dbn_length, dbn_angle)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
+-   `ModelMoveXYZD(map, mobility, dbn_length, dbn_angle_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
 
 These contain the following fields: 
 
 -   `map`: A field that defines the arena within which movement occurs. The coordinate reference system of the `map` must align with the other components of the movement model, which typically require a Universal Transverse Mercator (planar) projection with coordinates in metres. `map` is required by all movement models;
+-   `mobility`: A number that defines the maximum movement distance between two time steps;
 -   `dbn_length`: The distribution of step lengths;
 -   `dbn_angle`: The distribution of turning angles;
 -   `dbn_angle_delta`: The distribution of changes in turning angle;
@@ -47,7 +48,7 @@ struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
 ```
 
 New [`ModelMove`](@ref) structures should obey the following requirements:
--   The `map` field is required by all [`ModelMove`](@ref) sub-types; 
+-   The `map` and `mobility` fields are required by all [`ModelMove`](@ref) sub-types; 
 -   By default, `map` is assumed to be a `GeoArray` but a shapefile can be used with a custom [`extract()`](@ref) method;
 
 To use a new [`ModelMove`](@ref) sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
@@ -60,13 +61,14 @@ To use a new [`ModelMove`](@ref) sub-type in the simulation of animal movements 
 abstract type ModelMove end 
 
 # Random walk in X and Y
-struct ModelMoveXY{T, U, V} <: ModelMove
+struct ModelMoveXY{T, U, V, W} <: ModelMove
     # Environment
     map::T
     # Distribution of step lengths
-    dbn_length::U
+    mobility::U
+    dbn_length::V
     # Distribution of turning angles
-    dbn_angle::V
+    dbn_angle::W
 end 
 @doc (@doc ModelMove) ModelMoveXY
 
@@ -75,14 +77,15 @@ end
 # @doc (@doc ModelMove) ModelMoveXYZ
 
 # Correlated random walk in X, Y and random walk in Z
-struct ModelMoveXYZD{T, U, V, X} <: ModelMove
+struct ModelMoveXYZD{T, U, V, W, X} <: ModelMove
     # Environment
     map::T
     # Step length
-    dbn_length::U 
+    mobility::U
+    dbn_length::V
     # Change in turning angle
     # * This must be symmetrically centred around zero
-    dbn_angle_delta::V
+    dbn_angle_delta::W
     # Change in depth 
     dbn_z_delta::X
 end 
@@ -421,15 +424,12 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     x = state_to.x - state_from.x
     y = state_to.y - state_from.y
     length, angle = cartesian_to_polar(x, y)
-    # When locations are far apart, we set -Inf density for speed
-    # * cdf() is used here b/c it works if the user does not set a maximum speed
-    # * TO DO
-    # * Consider maximum(model_move.dbn_length) or insupport() which may be faster
+    # When locations exceed model_move.mobility, we set -Inf density for speed
     # * Consider NearestNeighbors.jl to build a kd tree:
     # * - Provide locations
     # * - Get index of particles within mobility
     # * - This may improve speed by eliminating the need to iterative over all particles in the smoother 
-    if cdf(model_move.dbn_length, length) > 0.999
+    if model_move.mobility > length
         return -Inf
     end
     # Calculate log(abs(determinate))
