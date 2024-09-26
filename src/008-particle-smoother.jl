@@ -4,7 +4,7 @@ using ProgressMeter: @showprogress
 export two_filter_smoother
 
 """
-    two_filter_smoother(; timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, box, n_sim::Int)
+    two_filter_smoother(; timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, map_validity, n_sim::Int)
 
 A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t âˆˆ 1:T`.
 
@@ -14,12 +14,12 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 - `xfwd`: A `Matrix` of [`State`](@ref)s from the forward filter (see [`particle_filter()`](@ref));
 - `xbwd`: A `Matrix` of [`State`](@ref)s from the backward filter (see [`particle_filter()`](@ref));
 - `model_move`: A [`ModelMove`](@ref) instance;
-- `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' (see [`logpdf_move()`](@ref));
+- `map_validity`: (optional) A `GeoArray` that defines the 'validity map' (see [`logpdf_move()`](@ref));
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (see [`logpdf_move()`](@ref));
 
 # Details
 
-[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `box` and `n_sim` arguments support the calculate of probability densities (see [`logpdf_move()`](@ref)). 
+[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `map_validity` and `n_sim` arguments support the calculate of probability densities (see [`logpdf_move()`](@ref)). 
 
 # Returns 
 
@@ -43,7 +43,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 Fearnhead, P., Wyncoll, D., Tawn, J., [2010](https://doi.org/10.1093/biomet/asq013). A sequential smoothing algorithm with linear computational cost. Biometrika 97, 447â€“464.
 
 """
-function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, box = nothing, n_sim::Int = 100)
+function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, map_validity = nothing, n_sim::Int = 100)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
@@ -69,7 +69,7 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
         @threads for k in 1:np
             for j in 1:np
                 # Evaluate probability density of movement between locations (i.e., the weight)
-                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, box, n_sim, cache))
+                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, map_validity, n_sim, cache))
             end
         end
         # Normalise weights & evaluate ESS

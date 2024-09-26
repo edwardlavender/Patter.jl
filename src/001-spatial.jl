@@ -83,36 +83,6 @@ function is_valid(map_value::Real, z::Real)
 end 
 
 # """
-#     bbox(x::Vector{<:Real})
-
-# Define a 'boundary box' `Tuple` from a `Vector` of four numbers (i.e., `min_x`, `max_x`, `min_y` and `max_y`).
-
-# # Details
-
-# The output of this function is designed to match that of [`GeoArray.bbox()`](@ref). This is used to define a 'mobility box' from `R`, for [`logpdf_move()`](@ref). 
-
-# # Returns
-
-# - A `NamedTuple` (`min_x`, `max_x`, `min_y` and `max_y`);
-
-# """  
-function bbox(x::Vector{<:Real})
-    length(x) == 4 || error("An extent is defined by four numbers.")
-    (min_x = x[1], max_x = x[2], min_y = x[3], max_y = x[4])
-end 
-
-
-# """
-#     in_bbox(bb, x, y)
-
-# Determine whether or not a coordinate (`x`, `y`) is within a boundary box. This function is used in [`logpdf_move()`](@ref).
-# """
-function in_bbox(bb, x, y)
-    x >= bb.min_x && x <= bb.max_x && y >= bb.min_y && y <= bb.max_y
-end
-
-
-# """
 #     distance(x0::Real, y0::Real, x1::Real, y1::Real)
 
 # Calculate Euclidean distances between coordinates. 

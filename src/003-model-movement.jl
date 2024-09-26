@@ -376,7 +376,7 @@ end
 
 """
     logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                model_move::ModelMove, t::Int, box, 
+                model_move::ModelMove, t::Int, map_validity, 
                 n_sim::Int,
                 cache::LRU)
     
@@ -389,13 +389,13 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` and `state_to` contain a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `box`: (optional) A `NamedTuple` (`min_x`, `max_x`, `min_y`, `max_y`) that defines a 'mobility box' within which movements between `state_from` and `state_to` are always (theoretically) legal. This can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances and `model_move.map` does not contain `NA`s;
+- `map_validity`: (optional) A `GeoArray` that maps the region within which movements between `state_from` and `state_to` are always legal. Valid regions must equal 1. `map_validity` can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances;
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
 - `cache`: A Least Recently Used (LRU) Cache;
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) and `model_move.map` does not contain `NaN`s, a 'mobility `box`' can be provided. This is a `NamedTuple` of coordinates that define the region within which movements between two locations are always theoretically legal. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) a 'validity map' can be provided. This is a `GeoArray` that define the region within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -411,7 +411,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                     model_move::ModelMove, t::Int, box, n_sim::Int = 100, 
+                     model_move::ModelMove, t::Int, map_validity, n_sim::Int = 100, 
                      cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
 
     #### Validate state 
@@ -436,13 +436,14 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     log_det = -0.5 * log(x^2 + y^2)
     
     #### Approximate the normalisation constant
-    # (A) Use box 
-    # * Set normalisation constant to 1.0 if the individual is within a box
-    # * `box` can be provided for 2D states & if there are no NaNs in the study area
-    # * It defines the box within which a move is always valid 
-    # * (i.e., the extent of the study area - mobility)
-    # * This code is implemented outside of logpdf_move_normalisation(): caching with the box is MUCH slower
-    if !isnothing(box) && in_bbox(box, state_from.x, state_from.y)
+    # (A) Use mobility grid 
+    # * Set normalisation constant to 1.0 if the individual is within a 'validity map'
+    # * `map_validity` can be provided for 2D states
+    # * This is a TRUE/FALSE (1, 0) GeoArray
+    # * Ones define the region within which a move is always valid
+    # * (i.e., the sea of the study area, shrunk by mobility)
+    # * This code is implemented outside of logpdf_move_normalisation(): caching with the validity map is MUCH slower
+    if !isnothing(map_validity) && isone(extract(map_validity, state_from.x, state_from.y))
         Z = 1.0
     # (B) Run MC simulation 
     # * Run simulation
