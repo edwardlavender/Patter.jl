@@ -376,7 +376,7 @@ end
 
 """
     logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                model_move::ModelMove, t::Int, map_validity, 
+                model_move::ModelMove, t::Int, vmap, 
                 n_sim::Int,
                 cache::LRU)
     
@@ -389,7 +389,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` and `state_to` contain a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `map_validity`: (optional) A `GeoArray` that maps the region within which movements between `state_from` and `state_to` are always legal. Valid regions must equal 1. `map_validity` can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances;
+- `vmap`: (optional) A `GeoArray` that maps the region within which movements between `state_from` and `state_to` are always legal. Valid regions must equal 1. `vmap` can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances;
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
 - `cache`: A Least Recently Used (LRU) Cache;
 
@@ -411,7 +411,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                     model_move::ModelMove, t::Int, map_validity, n_sim::Int = 100, 
+                     model_move::ModelMove, t::Int, vmap, n_sim::Int = 100, 
                      cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
 
     #### Validate state 
@@ -438,12 +438,12 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     #### Approximate the normalisation constant
     # (A) Use mobility grid 
     # * Set normalisation constant to 1.0 if the individual is within a 'validity map'
-    # * `map_validity` can be provided for 2D states
+    # * `vmap` can be provided for 2D states
     # * This is a TRUE/FALSE (1, 0) GeoArray
     # * Ones define the region within which a move is always valid
     # * (i.e., the sea of the study area, shrunk by mobility)
     # * This code is implemented outside of logpdf_move_normalisation(): caching with the validity map is MUCH slower
-    if !isnothing(map_validity) && isone(extract(map_validity, state_from.x, state_from.y))
+    if !isnothing(vmap) && isone(extract(vmap, state_from.x, state_from.y))
         Z = 1.0
     # (B) Run MC simulation 
     # * Run simulation
