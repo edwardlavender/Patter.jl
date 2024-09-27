@@ -156,7 +156,7 @@ Random.seed!(123);
 
 # Check threads
 Threads.nthreads()
-#> 1
+#> 11
 ```
 
 Third, we define the properties of our study area; namely, a `GeoArray`
@@ -316,7 +316,7 @@ fwd = particle_filter(timeline = timeline,
 # Simulate initial states for the backward filter
 xinit = simulate_states_init(state_type = StateXY, 
                              model_move = model_move,
-                             n = 200_000, 
+                             n = 300_000, 
                              xlim = (705842.1, 710642.1), 
                              ylim = (6249007, 6269707));
 
@@ -345,12 +345,13 @@ the individual at each time step (accounting for all of the data before
 and after each step):
 
 ``` julia
+# (optional) Set vmap to improve speed here
 n_particle = 100;
 smo = two_filter_smoother(timeline = timeline,
-                                 xfwd = fwd.state[1:n_particle, :],
-                                 xbwd = bwd.state[1:n_particle, :],
-                                 model_move = model_move,
-                                 n_sim = 100);
+                          xfwd = fwd.state[1:n_particle, :],
+                          xbwd = bwd.state[1:n_particle, :],
+                          model_move = model_move,
+                          n_sim = 100);
 ```
 
 # Mapping
