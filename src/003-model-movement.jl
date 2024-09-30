@@ -439,21 +439,23 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     # (A) Use mobility grid 
     # * Set normalisation constant to 1.0 if the individual is within a 'validity map'
     # * `vmap` can be provided for 2D states
-    # * This is a TRUE/FALSE (1, 0) GeoArray
+    # * This is a TRUE/FALSE (1.0, 0.0) GeoArray
+    # * In the smoother, `state_from.map_value` has been updated by `vmap`
     # * Ones define the region within which a move is always valid
     # * (i.e., the sea of the study area, shrunk by mobility)
     # * This code is implemented outside of logpdf_move_normalisation(): caching with the validity map is MUCH slower
-    if !isnothing(vmap) && isone(extract(vmap, state_from.x, state_from.y))
-        Z = 1.0
+    if !isnothing(vmap) && isone(state_from.map_value)
+        # log(1.0)
+        log_z = 0.0 
     # (B) Run MC simulation 
     # * Run simulation
     # * Caching is MUCH faster when MC iterations are required
     else 
-        Z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, n_sim, cache)
+        log_z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, n_sim, cache)
     end 
 
     #### Evaluate density 
-    logpdf_step(state_from, state_to, model_move, t, length, angle) + log_det - log(Z)
+    logpdf_step(state_from, state_to, model_move, t, length, angle) + log_det - log_z
 
 end 
 
@@ -463,7 +465,7 @@ end
                               model_move::ModelMove, t::Int, n_sim::Int, 
                               cache::LRU)
 
-Approximate the normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
+Approximate the (log) normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
 
 # Arguments
 
@@ -476,11 +478,11 @@ Approximate the normalisation constant for the (log) probability density of move
 
 # Details
 
-This internal function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+This internal function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The (log) normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns 
 
-- A number (the normalisation constant); 
+- A number (the log normalisation constant); 
 
 # See also
 
@@ -506,7 +508,8 @@ function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::M
 
     # Evaluate posterior mean
     # * This assumes a Beta(1, 1) prior
-    (k + 1) / (n_sim + 2)
+    log((k + 1) / (n_sim + 2))
+
 end
 
 # Cached version 

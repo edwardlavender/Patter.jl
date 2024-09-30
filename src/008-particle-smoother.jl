@@ -51,6 +51,13 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
     #### Set up
     # Dimension of input state
     zdim = hasfield(typeof(xfwd[1]), :z)
+    # Reset map_value 
+    # * We set map_value to 0.0 or 1.0 if vmap is supplied
+    # * This defines, for each state_from, whether or not movements from that state is always valid
+    # * The one-time lookup for each state should speed up logpdf_move()
+    if !isnothing(vmap)
+        xbwd = edit_map_value(xbwd, vmap)
+    end 
     # Matrix for smoothed particles
     xout = similar(xfwd)
     xout[:, 1] .= xbwd[:, 1]
@@ -79,6 +86,9 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
         idx = resample(w, np)
         xout[:, t] .=  xbwd[idx, t]
     end
+
+    #### Reset map_value
+    xout = edit_map_value(xout, model_move.map)
 
     #### Return outputs
     # Follow particle_filter() format
