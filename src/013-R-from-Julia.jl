@@ -123,9 +123,10 @@ function r_get_particles(particles::NamedTuple)
                             maxlp = particles.maxlp)
     # Return outputs 
     (
-        states     = states, 
+        states      = states, 
         diagnostics = diagnostics, 
-        convergence = particles.convergence
+        convergence = particles.convergence, 
+        trials      = particles.trials
     )
 end 
 @doc (@doc r_get) r_get_particles

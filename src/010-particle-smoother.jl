@@ -31,6 +31,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
     - `ess`
     - `maxlp`: `NaN`
     - `convergence`: `true`
+    - `trial`: NaN
 
 # See also
 
@@ -99,7 +100,8 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
         direction   = nothing, 
         ess         = ess, 
         maxlp       = NaN, 
-        convergence = true
+        convergence = true, 
+        trials      = NaN
     )
 
 end

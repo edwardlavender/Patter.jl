@@ -1,7 +1,6 @@
 using LRUCache: LRU
 
 export ModelMove, ModelMoveXY, ModelMoveXYZD
-export simulate_states_init
 
 
 #########################
@@ -53,7 +52,7 @@ New [`ModelMove`](@ref) structures should obey the following requirements:
 
 To use a new [`ModelMove`](@ref) sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
 -   Define a corresponding [`State`](@ref) sub-type;
--   (optional) Define a [`Patter.simulate_state_init()`](@ref) method for [`simulate_states_init()`](@ref) to simulate initial states;
+-   (optional) Define [`Patter.map_init()`](@ref) and [`Patter.states_init()`](@ref) methods for [`simulate_states_init()`](@ref) to simulate initial states;
 -   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move()`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
 -   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
 
@@ -94,118 +93,6 @@ end
 
 #########################
 #########################
-#### Initialise states
-
-"""
-    simulate_state_init(state_type::Type{<:State}, model_move::ModelMove, xlim, ylim)
-
-Simulate a (tentative) initial [`State`](@ref) for an animal.
-
-# Arguments:
--   `state_type`: An empty [`State`](@ref) sub-type, such as [`StateXY`](@ref), used for method dispatch only;
--   `model_move`: A [`ModelMove`](@ref) instance;
--   `xlim`, `ylim`: Pairs of numbers that define the boundaries of the area within which initial (`x`, `y`) coordinates are sampled;
-
-# Details
-
-An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal, plus initial values for any other [`State`](@ref) components (such as the animal's initial bearing, for [`StateXYZD`](@ref)). The purpose of [`simulate_state_init()`](@ref) is to simulate an initial instance of a [`State`](@ref). This is wrapped by the exported function [`simulate_states_init()`](@ref), which simulates a `Vector` of initial [`State`](@ref)s iteratively until `n` valid [`State`](@ref)s are simulated (see [`is_valid()`](@ref)). Initial [`State`](@ref)s are required to initialise the simulation of individual movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)). 
-
-[`simulate_state_init()`](@ref) is an internal generic function, with methods for the built-in [`State`](@ref) sub-types. For custom [`State`](@ref) sub-types, write a corresponding [`simulate_state_init()`](@ref) function to use the exported [`simulate_states_init()`](@ref) function. 
-
-# Returns
-
-- A [`State`](@ref) instance;
-
-# See also 
-
-* [`State`](@ref) for [`State`](@ref) sub-types;
-* [`extract`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
-* [`simulate_state_init()`](@ref) to simulate an initial [`State`](@ref);
-* [`simulate_states_init()`](@ref) to simulate a `Vector` of initial [`State`](@ref)s, iteratively until `n` valid [`State`](@ref)s are simulated;
-* [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use initial [`State`](@ref)s to simulate animal movement paths;
-
-"""
-function simulate_state_init end 
-
-function simulate_state_init(state_type::Type{StateXY}, model_move::ModelMove, xlim, ylim)
-    x = rand() * (xlim[2] - xlim[1]) + xlim[1]
-    y = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    map_value = extract(model_move.map, x, y)
-    StateXY(map_value, x, y)
-end
-
-# function simulate_state_init(state_type::Type{StateXYZ})
-# * TO DO
-
-function simulate_state_init(state_type::Type{StateXYZD}, model_move::ModelMove, xlim, ylim)
-    x         = rand() * (xlim[2] - xlim[1]) + xlim[1]
-    y         = rand() * (ylim[2] - ylim[1]) + ylim[1]
-    map_value = extract(model_move.map, x, y)
-    z         = rand() * map_value
-    angle     = rand() * 2 * pi
-    StateXYZD(map_value, x, y, z, angle)
-end 
-
-"""
-    simulate_states_init(; state_type::Type{<:State}, model_move::ModelMove, n::Int, xlim, ylim)
-
-Simulate a `Vector` of initial [`State`](@ref)s for the simulation of movement paths.
-
-# Arguments (keywords)
-- `state_type`: An empty [`State`](@ref) sub-type, such as `StateXY`, used for method dispatch only;
-- `model_move`: A [`ModelMove`](@ref) instance;
-- `n`: An integer that defines number of initial states to simulate;
-- `xlim`, `ylim`: (optional) Pairs of numbers that define the boundaries of the area within initial (`x`, `y`) coordinates are sampled;
-
-# Details
-
-An initial [`State`](@ref) defines the initial (`x`, `y`) location of an animal, plus initial values for any other [`State`](@ref) components (such as the animal's initial bearing, for [`StateXYZD`](@ref)). The purpose of [`simulate_states_init()`](@ref) is to simulate a `Vector` of initial [`State`](@ref) instances. This wraps the internal generic function [`simulate_state_init()`](@ref), iteratively simulating initial [`State`](@ref)s until `n` valid [`State`](@ref)s are simulated (see [`is_valid()`](@ref)). For custom [`State`](@ref) sub-types, a corresponding [`simulate_state_init()`](@ref) method is required to use this function. Initial [`State`](@ref)s are required to initialise the simulation of individual movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)). 
-
-# Returns
-
-- A `Vector` of `n` [`State`](@ref) instances;
-
-# See also 
-
-* [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`extract`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
-* [`simulate_state_init()`](@ref) to simulate an initial [`State`](@ref);
-* [`simulate_states_init()`](@ref) to simulate a `Vector` of initial [`State`](@ref)s, iteratively until `n` valid [`State`](@ref)s are simulated;
-* [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use initial [`State`](@ref)s to simulate animal movement paths;
-
-"""
-function simulate_states_init(; state_type::Type{<:State}, model_move::ModelMove, n::Int, xlim = nothing, ylim = nothing)
-
-    # (optional) Define xlim and ylim
-    bb = GeoArrays.bbox(model_move.map)
-    if isnothing(xlim)
-        xlim = (bb.min_x, bb.max_x)
-    end
-    if isnothing(ylim)
-        ylim = (bb.min_y, bb.max_y)
-    end
-    
-    # Sample within limits
-    # * We assume that there are at least some valid locations within xlim & ylim
-    xinit = state_type[]
-    zdim  = hasfield(state_type, :z)
-    while length(xinit) < n
-        pinit = simulate_state_init(state_type, model_move, xlim, ylim)
-        valid = state_is_valid(pinit, zdim)
-        if valid
-            push!(xinit, pinit)
-        end 
-    end
-    
-    xinit
-
-end
-
-
-#########################
-#########################
 #### Simulate movement steps
 
 # simulate_step() methods
@@ -224,7 +111,7 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 
 # Details
 
-[`simulate_step()`](@ref) is an internal generic function that simulates a new value for the animal's [`State`], that is, the animal's location (and other state components). Methods are provided for the built-in [`State`] and movement model ([`ModelMove`](@ref)) sub-types. For custom [`State`](@ref)s or [`ModelMove`](@ref) sub-types, corresponding methods must be provided. Internally, [`simulate_step()`](@ref) is wrapped by [`simulate_move()`](@ref), which implements[ `simulate_step()`](@ref) iteratively until a valid [`State`](@ref) is simulated (see [`is_valid()`](@ref)). 
+[`Patter.simulate_step()`](@ref) is an internal generic function that simulates a new value for the animal's [`State`], that is, the animal's location (and other state components). Methods are provided for the built-in [`State`] and movement model ([`ModelMove`](@ref)) sub-types. For custom [`State`](@ref)s or [`ModelMove`](@ref) sub-types, corresponding methods must be provided. Internally, [`Patter.simulate_step()`](@ref) is wrapped by [`Patter.simulate_move()`](@ref), which implements[ `simulate_step()`](@ref) iteratively until a valid [`State`](@ref) is simulated (see [`is_valid()`](@ref)). 
 
 # Returns
 
@@ -233,9 +120,9 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 # See also
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) to simulate a new [`State`](@ref);
+* [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
 * [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
-* [`simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
+* [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
 """
@@ -280,7 +167,7 @@ Simulate movement from one location ([`State`](@ref)) into a new location ([`Sta
 
 # Details
 
-[`simulate_move()`](@ref) is an internal function that uses a [`simulate_step()`](@ref) method to simulate new state proposals iteratively until a valid [`State`](@ref) is generated or `n_trial` is reached (see [`is_valid()`](@ref)). For custom [`State`](@ref)s or [`ModelMove`](@ref) sub-types, corresponding [`simulate_step()`](@ref) methods must be provided for this function. [`simulate_move()`](@ref) is used to simulate movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)).
+[`Patter.simulate_move()`](@ref) is an internal function that uses a [`Patter.simulate_step()`](@ref) method to simulate new state proposals iteratively until a valid [`State`](@ref) is generated or `n_trial` is reached (see [`is_valid()`](@ref)). For custom [`State`](@ref)s or [`ModelMove`](@ref) sub-types, corresponding [`Patter.simulate_step()`](@ref) methods must be provided for this function. [`Patter.simulate_move()`](@ref) is used to simulate movement paths (e.g., in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref)).
 
 # Returns
 
@@ -291,9 +178,9 @@ Simulate movement from one location ([`State`](@ref)) into a new location ([`Sta
 # See also
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) to simulate a new [`State`](@ref);
+* [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
 * [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
-* [`simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
+* [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
 """
@@ -350,7 +237,7 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 # See also 
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
 * [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
 * [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
@@ -404,7 +291,7 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 # See also 
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
 * [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
 * [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
@@ -487,7 +374,7 @@ This internal function runs a Monte Carlo simulation of `n_sim` iterations to es
 # See also
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
 * [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
 * [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;

@@ -43,7 +43,7 @@ New states should obey the following requirements:
 
 To use a new `State` sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
 -   Define a corresponding [`ModelMove`](@ref) sub-type;
--   (optional) Define a [`Patter.simulate_state_init()`](@ref) method for [`simulate_states_init()`](@ref) to simulate initial states;
+-   (optional) Define [`Patter.map_init()`](@ref) and [`Patter.states_init()`](@ref) methods for [`simulate_states_init()`](@ref) to simulate initial states;
 -   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move()`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
 -   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
 

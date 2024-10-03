@@ -15,7 +15,7 @@ Simulate discrete-time movement path(s) from a `Vector` of initial [`State`](@re
 
 # Details
 
-[`State`](@ref) refers to the (`x`, `y`) location of an animal (alongside additional state components, if applicable). To simulate initial states, use [`simulate_states_init()`](@ref). For each initial state, [`simulate_path_walk()`](@ref) simulates a sequence of [`State`](@ref)s (i.e., a movement path) of `length(timeline)` steps using the movement model (`model_move`). The simulation of movement from one [`State`](@ref) into another is implemented by the internal function [`simulate_move()`](@ref), which in turn wraps [`simulate_step()`](@ref). At each time step, [`simulate_move()`](@ref) implements [`simulate_step()`](@ref) iteratively until a valid movement is identified (see [`is_valid()`](@ref)). [`simulate_step()`](@ref) is a generic function. Methods are implemented for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types but custom sub-types require a corresponding [`simulate_step()`](@ref) method. 
+[`State`](@ref) refers to the (`x`, `y`) location of an animal (alongside additional state components, if applicable). To simulate initial states, use [`simulate_states_init()`](@ref). For each initial state, [`simulate_path_walk()`](@ref) simulates a sequence of [`State`](@ref)s (i.e., a movement path) of `length(timeline)` steps using the movement model (`model_move`). The simulation of movement from one [`State`](@ref) into another is implemented by the internal function [`Patter.simulate_move()`](@ref), which in turn wraps [`Patter.simulate_step()`](@ref). At each time step, [`Patter.simulate_move()`](@ref) implements [`Patter.simulate_step()`](@ref) iteratively until a valid movement is identified (see [`is_valid()`](@ref)). [`Patter.simulate_step()`](@ref) is a generic function. Methods are implemented for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types but custom sub-types require a corresponding [`Patter.simulate_step()`](@ref) method. 
 
 # Returns
 - A `matrix` of [`State`](@ref)s:
@@ -23,11 +23,6 @@ Simulate discrete-time movement path(s) from a `Vector` of initial [`State`](@re
     - Each column represents a time step along `timeline`;
 
 # See also
-
-* [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
-* [`simulate_path_walk()`](@ref) to simulate animal movement paths (via [`ModelMove`](@ref));
-* [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
 
 """
 function simulate_path_walk(; xinit = Vector, model_move::ModelMove, timeline::Vector{DateTime})
@@ -73,7 +68,7 @@ The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`]
 # See also 
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
-* [`simulate_step()`](@ref) and [`simulate_move()`](@ref) to simulate new [`State`](@ref)s;
+* [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
 * [`simulate_path_walk()`](@ref) to simulate animal movement paths (via [`ModelMove`](@ref));
 * [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
 

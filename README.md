@@ -99,8 +99,7 @@ parameters, and a corresponding `Vector` of observation model
 To simulate initial states (i.e., locations) for the particle filter,
 use:
 
-- `simulate_states_init()` to simulate states uniformally across an
-  area;
+- `simulate_states_init()` to simulate states across an area;
 
 To define a movement model, see:
 
@@ -134,9 +133,10 @@ essential packages:
 # Activate project
 using Pkg
 Pkg.activate(".")
-
-# Load packages
 using Patter
+
+# Load supporting packages
+import ArchGDAL
 import CSV
 using DataFrames
 using Dates
@@ -144,6 +144,7 @@ using Distributions
 import GeoArrays
 using Plots
 import Random
+using Rasters
 using RCall
 ```
 
@@ -159,12 +160,16 @@ Threads.nthreads()
 #> 11
 ```
 
-Third, we define the properties of our study area; namely, a `GeoArray`
-of our study area that defines the environment within which movements
-are possible and the timeline over which we will model movements:
+Third, we define the properties of our study area; namely, a `Raster`
+and `GeoArray` of our study area that defines the environment within
+which movements are possible and the timeline over which we will model
+movements:
 
 ``` julia
-# Read a UTM bathymetry raster that defines the 'environment' within which movements occurred
+# Read a UTM bathymetry rasters that defines the 'environment' within which movements occurred
+# * `env_init` is a Raster that is used for sampling initial states (locations)
+# * `env` is a GeoArray that is used by the algorithms (faster)
+env_init = Rasters.Raster(joinpath("data", "bathymetry.tif"));
 env = GeoArrays.read(joinpath("data", "bathymetry.tif"));
 
 # Define a timeline for the analysis
@@ -274,8 +279,10 @@ acoustics.timestamp = DateTime.(acoustics.timestamp, "yyyy-mm-dd HH:MM:SS");
 archival.timestamp = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
 
 # Collate datasets & associated `ModelObs` instances into a typed dictionary 
-yobs = assemble_yobs(datasets = [acoustics, archival], 
-                     model_obs_types = [ModelObsAcousticLogisTrunc, ModelObsDepthNormalTrunc]);
+datasets        = [acoustics, archival];
+model_obs_types = [ModelObsAcousticLogisTrunc, ModelObsDepthNormalTrunc];
+yobs = assemble_yobs(datasets = datasets,
+                     model_obs_types = model_obs_types);
 ```
 
 Of course, you do not need acoustic and archival data to implement the
@@ -299,11 +306,16 @@ time step:
 
 ``` julia
 # Simulate initial states for the forward filter
-xinit = simulate_states_init(state_type = StateXY,
+xinit = simulate_states_init(map = env_init, 
+                             timeline = timeline, 
+                             state_type = StateXY,
+                             xinit = nothing, 
                              model_move = model_move, 
-                             n = 200_000, 
-                             xlim = (705842.1, 710642.1), 
-                             ylim = (6249007, 6269707));
+                             datasets = datasets,
+                             model_obs_types = model_obs_types,
+                             n_particle = 200_000, 
+                             direction = "forward", 
+                             output = "Vector");
 
 # Run the forward filter
 fwd = particle_filter(timeline = timeline,
@@ -314,11 +326,16 @@ fwd = particle_filter(timeline = timeline,
                       direction = "forward");
 
 # Simulate initial states for the backward filter
-xinit = simulate_states_init(state_type = StateXY, 
-                             model_move = model_move,
-                             n = 300_000, 
-                             xlim = (705842.1, 710642.1), 
-                             ylim = (6249007, 6269707));
+xinit = simulate_states_init(map = env_init, 
+                             timeline = timeline, 
+                             state_type = StateXY,
+                             xinit = nothing, 
+                             model_move = model_move, 
+                             datasets = datasets,
+                             model_obs_types = model_obs_types,
+                             n_particle = 200_000, 
+                             direction = "backward", 
+                             output = "Vector");
 
 # Run the backward filter
 bwd = particle_filter(timeline = timeline,
@@ -330,11 +347,11 @@ bwd = particle_filter(timeline = timeline,
 ```
 
 The filter returns a `NamedTuple` that defines the time steps of the
-simulation, the simulated `State`s and other algorithm diagnostics
+simulation, the simulated `State`s and other algorithm diagnostics.
 
 ``` julia
 summary(fwd)
-#> "@NamedTuple{timesteps::Vector{Int64}, timestamps::Vector{DateTime}, state::Matrix{StateXY}, direction::String, ess::Vector{Float64}, maxlp::Vector{Float64}, convergence::Bool}"
+#> "@NamedTuple{timesteps::Vector{Int64}, timestamps::Vector{DateTime}, state::Matrix{StateXY}, direction::String, ess::Vector{Float64}, maxlp::Vector{Float64}, convergence::Bool, trials::Int64}"
 ```
 
 ## Particle smoother
@@ -361,7 +378,7 @@ space use. At the time of writing, `Patter.jl` focuses entirely on the
 provision of fast particle algorithms and lacks supporting routines for
 mapping and visualisation. However, we can easily estimate a utilisation
 distribution from `Julia` using the wrapper `patter` `R` package via
-`RCall`. This is the `R` code:
+`RCall` (on Windows and MacOS). This is the `R` code:
 
 ``` r
 # Load & attach packages
@@ -379,7 +396,7 @@ op <- options(terra.pal = rev(terrain.colors(256)))
 map <- terra::rast(file.path("data", "bathymetry.tif"))
 
 # Convert smoothed particles from `Julia` into a `pf_particles` object
-smo <- patter:::pf_particles(.xinit = NULL, .pf_obj = "smo")
+smo <- patter:::pf_particles(.pf_obj = "smo")
 
 # Estimate UD
 ud <- map_dens(.map = map,
