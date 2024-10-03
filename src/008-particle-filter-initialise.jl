@@ -228,10 +228,6 @@ end
 
 # Sample .n initial coordinates (map_value, x, y) from a SpatRaster
 function coords_init(map, size) 
-    # Check inputs
-    # * TO DO 
-    # * map should have a single layer
-    # * map should comprise at least some non-NA cells 
     # Sample initial coordinates (x, y, z)
     xinit = spatSample(x = map, size = size)
     if nrow(xinit) != size

@@ -26,13 +26,20 @@ end
 
 # Convert Raster to DataFrame, optionally dropping NaNs 
 function asDataFrame(; x::Rasters.Raster, na_rm::Bool = true)
-    # Get DataFrame
+    # Check that the map has a single layer (map_value)
+    if length(x.dims) != 2
+        error("The map should contain two dimensions (one layer) only.")
+    end 
+    # Define DataFrame (x, y, z)
     xyz = DataFrame(x)
     rename!(xyz, ["x", "y", "map_value"])
     @select!(xyz, :map_value, :x, :y)
     # Filter non NA cells 
     if na_rm
-        xyz = xyz[.!isnan.(xyz.map_value), :]
+        @subset! xyz .!isnan.(xyz.map_value)
+        if nrow(xyz) == 0
+            @warn "The map only contains NAs: empty DataFrame returned."
+        end 
     end
     return xyz
 end 
@@ -40,6 +47,11 @@ end
 # terra::spatSample() replacement, via asDataFrame()
 # See also: https://github.com/rafaqz/Rasters.jl/issues/771
 function spatSample(; x::Rasters.Raster, size::Int64 = 1, na_rm::Bool = true)
+    # Verify that map should comprises at least some non-NA cells
+    if na_rm && all(isnan, x)
+        error("The map only contains NAs.")
+    end
+    # Define DataFrame (x, y, z)
     xyz = asDataFrame(x = x, na_rm = na_rm)
     return xyz[sample(1:nrow(xyz), size, replace = true), :]
 end 
