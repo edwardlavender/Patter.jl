@@ -79,7 +79,7 @@ These functions are used to initialise simulated movement trajectories in [`simu
 """
 function simulate_states_init end 
 
-# The default method (for unknown models) returns `.map`
+# The default method (for unknown models) returns `map`
 function map_init(
     map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
@@ -148,7 +148,7 @@ function map_init(map::Rasters.Raster,
 
 end 
 
-# For ModelObsDepthUniform, we restrict .map using the depth observation
+# For ModelObsDepthUniform, we restrict map using the depth observation
 function map_init(map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
     model_move::ModelMove, 
@@ -179,7 +179,7 @@ function map_init(map::Rasters.Raster,
 
 end 
 
-# For ModelObsDepthNormalTrunc, we restrict .map using the depth observation
+# For ModelObsDepthNormalTrunc, we restrict map using the depth observation
 function map_init(map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
     model_move::ModelMove, 
@@ -200,7 +200,7 @@ function map_init(map::Rasters.Raster,
     # Define the corresponding structure parameters
     depth_deep_eps = dataset.depth_deep_eps[pos]
     # Mask map between limits (false/true -> NaN/true)
-    # * .map + depth_deep_eps must be >= depth
+    # * map + depth_deep_eps must be >= depth
     msk = (map .+ depth_deep_eps .>= depth)
     classify!(msk, false => missingval(map))
     mask!(map, with = msk)
@@ -208,7 +208,7 @@ function map_init(map::Rasters.Raster,
 
 end 
 
-# Iteratively update .map (according for each input dataset) using map_init methods
+# Iteratively update map (according for each input dataset) using map_init methods
 function map_init_iter(
     map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
@@ -279,7 +279,7 @@ function simulate_states_init(;
     if isnothing(xinit) 
         
         #### Define an initial map from which to sample
-        # We use the observation datasets to restrict (if possible) the input `.map` for sampling
+        # We use the observation datasets to restrict (if possible) the input `map` for sampling
         if !isnothing(model_obs_types) 
             map = map_init_iter(map, 
                                 timeline,
