@@ -139,8 +139,11 @@ function map_init(map::Rasters.Raster,
                    row.buffer, 1000) for row in eachrow(cinfo)]
     vcontainer = spatIntersect(vcontainers)
     # Define container as SpatRaster
-    mask!(map, with = vcontainer)
-    # classify!(map, false => missingval(map))
+    # * Mask map
+    # * mask() returns missing (outside container) & original values
+    # * mask() also retains missing on land (desirable)
+    # * mask!() converts returns true/false (undesirable)
+    map = mask(map, with = vcontainer)
     return map
 
 end 
@@ -167,9 +170,10 @@ function map_init(map::Rasters.Raster,
     # Define the corresponding structure parameters
     depth_shallow_eps = dataset.depth_shallow_eps[pos]
     depth_deep_eps    = dataset.depth_deep_eps[pos]
-    # Mask map between limits
+    # Define mask (false/true -> NaN/true)
     msk = (map .- depth_shallow_eps .<= depth) .& (map .+ depth_deep_eps .>= depth)
-    classify!(msk, false => missingval(msk))
+    classify!(msk, false => missingval(map))
+    # Mask map between limits
     mask!(map, with = msk)
     return map 
 
@@ -195,10 +199,10 @@ function map_init(map::Rasters.Raster,
     depth = dataset.obs[pos]
     # Define the corresponding structure parameters
     depth_deep_eps = dataset.depth_deep_eps[pos]
-    # Mask map between limits
+    # Mask map between limits (false/true -> NaN/true)
     # * .map + depth_deep_eps must be >= depth
     msk = (map .+ depth_deep_eps .>= depth)
-    classify!(msk, false => missingval(msk))
+    classify!(msk, false => missingval(map))
     mask!(map, with = msk)
     return map
 
@@ -217,9 +221,8 @@ function map_init_iter(
         return(map)
     end 
 
-    map = deepcopy(map)
     for i in eachindex(model_obs_types)
-        map_init(map, timeline, model_move, datasets[i], model_obs_types[i], direction)
+        map = map_init(map, timeline, model_move, datasets[i], model_obs_types[i], direction)
     end 
     return map
 
@@ -277,7 +280,7 @@ function simulate_states_init(;
         
         #### Define an initial map from which to sample
         # We use the observation datasets to restrict (if possible) the input `.map` for sampling
-        if isnothing(model_obs_types) 
+        if !isnothing(model_obs_types) 
             map = map_init_iter(map, 
                                 timeline,
                                 model_move,

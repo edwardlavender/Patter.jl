@@ -25,7 +25,7 @@ function spatIntersect(x::Vector)
 end 
 
 # Convert Raster to DataFrame, optionally dropping NaNs 
-function asDataFrame(; x::Rasters.Raster, na_rm::Bool = true)
+function asDataFrame(; x::Rasters.Raster, drop_missing::Bool = true)
     # Check that the map has a single layer (map_value)
     if length(x.dims) != 2
         error("The map should contain two dimensions (one layer) only.")
@@ -35,10 +35,10 @@ function asDataFrame(; x::Rasters.Raster, na_rm::Bool = true)
     rename!(xyz, ["x", "y", "map_value"])
     @select!(xyz, :map_value, :x, :y)
     # Filter non NA cells 
-    if na_rm
-        @subset! xyz .!isnan.(xyz.map_value)
+    if drop_missing 
+        dropmissing!(xyz, :map_value)
         if nrow(xyz) == 0
-            @warn "The map only contains NAs: empty DataFrame returned."
+            @warn "The map only contains missing values: empty DataFrame returned."
         end 
     end
     return xyz
@@ -46,13 +46,13 @@ end
 
 # terra::spatSample() replacement, via asDataFrame()
 # See also: https://github.com/rafaqz/Rasters.jl/issues/771
-function spatSample(; x::Rasters.Raster, size::Int64 = 1, na_rm::Bool = true)
+function spatSample(; x::Rasters.Raster, size::Int64 = 1, drop_missing::Bool = true)
     # Verify that map should comprises at least some non-NA cells
-    if na_rm && all(isnan, x)
-        error("The map only contains NAs.")
+    if drop_missing && all(ismissing, x)
+        error("The map only contains missing values.")
     end
     # Define DataFrame (x, y, z)
-    xyz = asDataFrame(x = x, na_rm = na_rm)
+    xyz = asDataFrame(x = x, drop_missing = drop_missing)
     return xyz[sample(1:nrow(xyz), size, replace = true), :]
 end 
 
