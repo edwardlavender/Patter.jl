@@ -56,7 +56,7 @@ via [`Patter.simulate_obs()`](@ref).
 - `depth_shallow_eps`: A float that defines the shallow depth error;
 - `depth_deep_eps`: A float that defines the deep depth error;
 
-This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by two error terms (`depth_shallow_eps` and `depth_shallow_eps`), according to the equation:
+This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by two error terms (`depth_shallow_eps` and `depth_deep_eps`), according to the equation:
 
 ```math
 f\\left( y_t^{(D)} |  \\textit{\\textbf{s}}_t \\right) =
