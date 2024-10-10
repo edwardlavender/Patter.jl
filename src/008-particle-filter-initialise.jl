@@ -187,7 +187,7 @@ function map_init(map::Rasters.Raster,
     model_obs_type::Type{ModelObsDepthNormalTrunc}, 
     direction::String = "forward")
     # Check dataset
-    check_names(dataset, ["timestamp", "obs", "depth_shallow_eps", "depth_deep_eps"])
+    check_names(dataset, ["timestamp", "obs", "depth_sigma", "depth_deep_eps"])
     # Identify the first depth observation 
     t1  = ifelse(direction == "forward", first(timeline), last(timeline))
     pos = findall(dataset.timestamp .== t1)
