@@ -169,7 +169,7 @@ movements:
 # Read a UTM bathymetry rasters that defines the 'environment' within which movements occurred
 # * `env_init` is a Raster that is used for sampling initial states (locations)
 # * `env` is a GeoArray that is used by the algorithms (faster)
-env_init = Rasters.Raster(joinpath("data", "bathymetry.tif"));
+env_init = Patter.rast(x = joinpath("data", "bathymetry.tif"));
 env = GeoArrays.read(joinpath("data", "bathymetry.tif"));
 
 # Define a timeline for the analysis
@@ -260,12 +260,12 @@ first(archival, 6)
 #>  Row │ timestamp            sensor_id  obs      depth_sigma  depth_deep_eps
 #>      │ String31             Int64      Float64  Int64        Int64
 #> ─────┼──────────────────────────────────────────────────────────────────────
-#>    1 │ 2016-03-17 01:50:00          1    73.78           50              30
-#>    2 │ 2016-03-17 01:52:00          1    73.32           50              30
-#>    3 │ 2016-03-17 01:54:00          1    73.32           50              30
-#>    4 │ 2016-03-17 01:56:00          1    73.32           50              30
-#>    5 │ 2016-03-17 01:58:00          1    73.55           50              30
-#>    6 │ 2016-03-17 02:00:00          1    68.7            50              30
+#>    1 │ 2016-03-17 01:50:00          1    73.78           50              50
+#>    2 │ 2016-03-17 01:52:00          1    73.32           50              50
+#>    3 │ 2016-03-17 01:54:00          1    73.32           50              50
+#>    4 │ 2016-03-17 01:56:00          1    73.32           50              50
+#>    5 │ 2016-03-17 01:58:00          1    73.55           50              50
+#>    6 │ 2016-03-17 02:00:00          1    68.7            50              50
 ```
 
 Individual movements are connected to the observations by models of the
@@ -384,12 +384,6 @@ distribution from `Julia` using the wrapper `patter` `R` package via
 # Load & attach packages
 library(patter, quietly = TRUE)
 library(spatstat.explore, quietly = TRUE, warn.conflicts = FALSE)
-#> Warning: package 'spatstat.explore' was built under R version 4.3.3
-#> Warning: package 'spatstat.data' was built under R version 4.3.3
-#> Warning: package 'spatstat.univar' was built under R version 4.3.3
-#> Warning: package 'spatstat.geom' was built under R version 4.3.3
-#> Warning: package 'spatstat.random' was built under R version 4.3.3
-#> Warning: package 'nlme' was built under R version 4.3.3
 op <- options(terra.pal = rev(terrain.colors(256)))
               
 # Read map 
