@@ -1,5 +1,5 @@
 using DataFrames, DataFramesMeta
-using GeoArrays, Rasters, LibGEOS
+using DimensionalData, GeoArrays, Rasters, LibGEOS
 
 export extract
 
@@ -54,6 +54,24 @@ function spatSample(; x::Rasters.Raster, size::Int64 = 1, drop_missing::Bool = t
     # Define DataFrame (x, y, z)
     xyz = asDataFrame(x = x, drop_missing = drop_missing)
     return xyz[sample(1:nrow(xyz), size, replace = true), :]
+end 
+
+# Centre the locus on a raster
+# * This is required to ensure that extracted values match GeoArrays/terra
+function spatCentre(; x::Rasters.Raster)
+    # Guard against shiftlocus() errors on multi-layer maps
+    if length(x.dims) != 2
+        error("The map should contain two dimensions (one layer) only.")
+    end 
+    return Rasters.shiftlocus(DimensionalData.Dimensions.Lookups.Center(), x)
+end 
+
+# Read a single-layer raster for Patter.jl
+function rast(; x::String)
+    # Read Raster
+    x = Rasters.Raster(x, replace_missing = true)
+    # Centre coordinates to avoid floating point issues
+    return spatCentre(x = x)
 end 
 
 

@@ -170,11 +170,11 @@ function map_init(map::Rasters.Raster,
     # Define the corresponding structure parameters
     depth_shallow_eps = dataset.depth_shallow_eps[pos]
     depth_deep_eps    = dataset.depth_deep_eps[pos]
-    # Define mask (false/true -> NaN/true)
+    # Mask map between limits (false/true -> NaN/true)
+    # * map + depth_deep_eps must be >= depth
     msk = (map .- depth_shallow_eps .<= depth) .& (map .+ depth_deep_eps .>= depth)
-    classify!(msk, false => missingval(map))
-    # Mask map between limits
-    mask!(map, with = msk)
+    msk = classify(msk, false => missingval(map))
+    map = mask(map, with = msk)
     return map 
 
 end 
@@ -202,8 +202,8 @@ function map_init(map::Rasters.Raster,
     # Mask map between limits (false/true -> NaN/true)
     # * map + depth_deep_eps must be >= depth
     msk = (map .+ depth_deep_eps .>= depth)
-    classify!(msk, false => missingval(map))
-    mask!(map, with = msk)
+    msk = classify(msk, false => missingval(map))
+    map = mask(map, with = msk)
     return map
 
 end 
