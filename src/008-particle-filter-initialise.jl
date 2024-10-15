@@ -280,6 +280,9 @@ function simulate_states_init(;
         
         #### Define an initial map from which to sample
         # We use the observation datasets to restrict (if possible) the input `map` for sampling
+        # We do not need to deepcopy map b/c it is never updated by reference
+        # But, if this approach changes, a deepcopy is required for safe application
+        # of the algorithms from R for multiple time series dependent on the same initial map (`env_init`)
         if !isnothing(model_obs_types) 
             map = map_init_iter(map, 
                                 timeline,
