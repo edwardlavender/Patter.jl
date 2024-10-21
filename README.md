@@ -234,8 +234,14 @@ For analysis using `Patter.jl`, each dataset must comprise: a
 `obs` column that defines the observation (`0` or `1` in the case of
 acoustic observations); and additional columns that define the
 parameters of an observation model (`ModelObs`) structure that links
-movement to the observations. The wrapper `patter` package contains
-helper routines for the assembly of these datasets, if required.
+movement to the observations. The time series include (a) a standard
+acoustic dataset, a corresponding dataset of acoustic containers and a
+standard archival dataset. The acoustic containers dataset is derived
+from the acoustic dataset and defines the maximum possible distance of
+the individual from the receiver(s) that recorded the next detection(s)
+at each time step. This dataset facilitates convergence in the particle
+filter. The wrapper `patter` package contains helper routines for the
+assembly of these datasets, if required.
 
 ``` julia
 # Read acoustic (0, 1) observations
@@ -252,6 +258,32 @@ first(acoustics, 6)
 #>    5 │ 2016-03-17 01:50:00         11      0   7.07542e5   6.26771e6           ⋯
 #>    6 │ 2016-03-17 01:50:00         12      0   7.10042e5   6.26731e6
 #>                                                                3 columns omitted
+
+# Read acoustic containers looking 'forwards' or 'backwards' in time
+containers_fwd = CSV.read(joinpath("data", "containers-fwd.csv"), DataFrame);
+first(containers_fwd, 6)
+#> 6×6 DataFrame
+#>  Row │ timestamp            obs    sensor_id  receiver_x  receiver_y  radius
+#>      │ String31             Int64  Int64      Float64     Float64     Int64
+#> ─────┼───────────────────────────────────────────────────────────────────────
+#>    1 │ 2016-03-17 01:50:00      1         26   7.09242e5   6.25311e6    1500
+#>    2 │ 2016-03-17 01:52:00      1         26   7.09242e5   6.25311e6    1500
+#>    3 │ 2016-03-17 01:54:00      1         26   7.09242e5   6.25311e6    2250
+#>    4 │ 2016-03-17 01:56:00      1         26   7.09242e5   6.25311e6    1500
+#>    5 │ 2016-03-17 01:58:00      1         26   7.09242e5   6.25311e6    1500
+#>    6 │ 2016-03-17 02:00:00      1         26   7.09242e5   6.25311e6    2250
+containers_bwd = CSV.read(joinpath("data", "containers-bwd.csv"), DataFrame);
+first(containers_bwd, 6)
+#> 6×6 DataFrame
+#>  Row │ timestamp            obs    sensor_id  receiver_x  receiver_y  radius
+#>      │ String31             Int64  Int64      Float64     Float64     Int64
+#> ─────┼───────────────────────────────────────────────────────────────────────
+#>    1 │ 2016-03-17 01:52:00      1         26   7.09242e5   6.25311e6    1500
+#>    2 │ 2016-03-17 01:54:00      1         26   7.09242e5   6.25311e6    1500
+#>    3 │ 2016-03-17 01:56:00      1         26   7.09242e5   6.25311e6    1500
+#>    4 │ 2016-03-17 01:58:00      1         26   7.09242e5   6.25311e6    2250
+#>    5 │ 2016-03-17 02:00:00      1         26   7.09242e5   6.25311e6    1500
+#>    6 │ 2016-03-17 02:02:00      1         26   7.09242e5   6.25311e6    1500
 
 # Read archival (depth) observations
 archival = CSV.read(joinpath("data", "archival.csv"), DataFrame);
@@ -276,13 +308,86 @@ observation models in a typed dictionary for analysis:
 ``` julia
 # Process time stamps
 acoustics.timestamp = DateTime.(acoustics.timestamp, "yyyy-mm-dd HH:MM:SS");
+containers_fwd.timestamp = DateTime.(containers_fwd.timestamp, "yyyy-mm-dd HH:MM:SS");
+containers_bwd.timestamp = DateTime.(containers_bwd.timestamp, "yyyy-mm-dd HH:MM:SS");
 archival.timestamp = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
 
 # Collate datasets & associated `ModelObs` instances into a typed dictionary 
-datasets        = [acoustics, archival];
-model_obs_types = [ModelObsAcousticLogisTrunc, ModelObsDepthNormalTrunc];
-yobs = assemble_yobs(datasets = datasets,
-                     model_obs_types = model_obs_types);
+# * Acoustic containers are direction specific, so two datasets are required
+# * (for forward & backward runs of the particle filter, respectively)
+datasets_fwd        = [acoustics, containers_fwd, archival];
+datasets_bwd        = [acoustics, containers_bwd, archival]
+#> 3-element Vector{DataFrame}:
+#>  12960×8 DataFrame
+#>    Row │ timestamp            sensor_id  obs    receiver_x  receiver_y  receiv ⋯
+#>        │ DateTime             Int64      Int64  Float64     Float64     Int64  ⋯
+#> ───────┼────────────────────────────────────────────────────────────────────────
+#>      1 │ 2016-03-17T01:50:00          3      0   7.06442e5   6.25401e6         ⋯
+#>      2 │ 2016-03-17T01:50:00          4      0   7.09742e5   6.26771e6
+#>      3 │ 2016-03-17T01:50:00          7      0   7.08742e5   6.26911e6
+#>      4 │ 2016-03-17T01:50:00          9      0   7.06042e5   6.25431e6
+#>      5 │ 2016-03-17T01:50:00         11      0   7.07542e5   6.26771e6         ⋯
+#>      6 │ 2016-03-17T01:50:00         12      0   7.10042e5   6.26731e6
+#>      7 │ 2016-03-17T01:50:00         14      0   7.03642e5   6.26631e6
+#>      8 │ 2016-03-17T01:50:00         18      0   7.08642e5   6.26231e6
+#>    ⋮   │          ⋮               ⋮        ⋮        ⋮           ⋮              ⋱
+#>  12954 │ 2016-03-18T01:48:00         24      0   7.09142e5   6.26251e6         ⋯
+#>  12955 │ 2016-03-18T01:48:00         26      0   7.09242e5   6.25311e6
+#>  12956 │ 2016-03-18T01:48:00         27      0   7.04442e5   6.25021e6
+#>  12957 │ 2016-03-18T01:48:00         29      0   6.99642e5   6.26761e6
+#>  12958 │ 2016-03-18T01:48:00         30      0   7.07842e5   6.25291e6         ⋯
+#>  12959 │ 2016-03-18T01:48:00         31      0   7.09742e5   6.25331e6
+#>  12960 │ 2016-03-18T01:48:00         33      0   7.07342e5   6.25341e6
+#>                                                 3 columns and 12945 rows omitted
+#>  360×6 DataFrame
+#>  Row │ timestamp            obs    sensor_id  receiver_x  receiver_y  radius
+#>      │ DateTime             Int64  Int64      Float64     Float64     Int64
+#> ─────┼───────────────────────────────────────────────────────────────────────
+#>    1 │ 2016-03-17T01:52:00      1         26   7.09242e5   6.25311e6    1500
+#>    2 │ 2016-03-17T01:54:00      1         26   7.09242e5   6.25311e6    1500
+#>    3 │ 2016-03-17T01:56:00      1         26   7.09242e5   6.25311e6    1500
+#>    4 │ 2016-03-17T01:58:00      1         26   7.09242e5   6.25311e6    2250
+#>    5 │ 2016-03-17T02:00:00      1         26   7.09242e5   6.25311e6    1500
+#>    6 │ 2016-03-17T02:02:00      1         26   7.09242e5   6.25311e6    1500
+#>    7 │ 2016-03-17T02:04:00      1         26   7.09242e5   6.25311e6    2250
+#>    8 │ 2016-03-17T02:06:00      1         26   7.09242e5   6.25311e6    1500
+#>   ⋮  │          ⋮             ⋮        ⋮          ⋮           ⋮         ⋮
+#>  354 │ 2016-03-17T13:14:00      1         26   7.09242e5   6.25311e6   95250
+#>  355 │ 2016-03-17T13:16:00      1         26   7.09242e5   6.25311e6   96000
+#>  356 │ 2016-03-17T13:18:00      1         26   7.09242e5   6.25311e6   96750
+#>  357 │ 2016-03-17T13:20:00      1         26   7.09242e5   6.25311e6   97500
+#>  358 │ 2016-03-17T13:22:00      1         26   7.09242e5   6.25311e6   98250
+#>  359 │ 2016-03-17T13:24:00      1         26   7.09242e5   6.25311e6   99000
+#>  360 │ 2016-03-17T13:26:00      1         26   7.09242e5   6.25311e6   99750
+#>                                                              345 rows omitted
+#>  720×5 DataFrame
+#>  Row │ timestamp            sensor_id  obs      depth_sigma  depth_deep_eps
+#>      │ DateTime             Int64      Float64  Int64        Int64
+#> ─────┼──────────────────────────────────────────────────────────────────────
+#>    1 │ 2016-03-17T01:50:00          1    73.78           50              50
+#>    2 │ 2016-03-17T01:52:00          1    73.32           50              50
+#>    3 │ 2016-03-17T01:54:00          1    73.32           50              50
+#>    4 │ 2016-03-17T01:56:00          1    73.32           50              50
+#>    5 │ 2016-03-17T01:58:00          1    73.55           50              50
+#>    6 │ 2016-03-17T02:00:00          1    68.7            50              50
+#>    7 │ 2016-03-17T02:02:00          1    72.16           50              50
+#>    8 │ 2016-03-17T02:04:00          1    72.85           50              50
+#>   ⋮  │          ⋮               ⋮         ⋮          ⋮             ⋮
+#>  714 │ 2016-03-18T01:36:00          1   163.32           50              50
+#>  715 │ 2016-03-18T01:38:00          1   175.6            50              50
+#>  716 │ 2016-03-18T01:40:00          1   178.85           50              50
+#>  717 │ 2016-03-18T01:42:00          1   180.47           50              50
+#>  718 │ 2016-03-18T01:44:00          1   178.61           50              50
+#>  719 │ 2016-03-18T01:46:00          1   178.85           50              50
+#>  720 │ 2016-03-18T01:48:00          1   179.08           50              50
+#>                                                             705 rows omitted
+model_obs_types     = [ModelObsAcousticLogisTrunc, 
+                       ModelObsAcousticContainer, 
+                       ModelObsDepthNormalTrunc];
+yobs_fwd            = assemble_yobs(datasets = datasets_fwd,
+                                    model_obs_types = model_obs_types);
+yobs_bwd            = assemble_yobs(datasets = datasets_bwd,
+                                    model_obs_types = model_obs_types);
 ```
 
 Of course, you do not need acoustic and archival data to implement the
@@ -311,16 +416,16 @@ xinit = simulate_states_init(map = env_init,
                              state_type = StateXY,
                              xinit = nothing, 
                              model_move = model_move, 
-                             datasets = datasets,
+                             datasets = datasets_fwd,
                              model_obs_types = model_obs_types,
-                             n_particle = 200_000, 
+                             n_particle = 20_000, 
                              direction = "forward", 
                              output = "Vector");
 
 # Run the forward filter
 fwd = particle_filter(timeline = timeline,
                       xinit = xinit,
-                      yobs = yobs,
+                      yobs = yobs_fwd,
                       model_move = model_move,
                       n_record = 500,
                       direction = "forward");
@@ -331,16 +436,16 @@ xinit = simulate_states_init(map = env_init,
                              state_type = StateXY,
                              xinit = nothing, 
                              model_move = model_move, 
-                             datasets = datasets,
+                             datasets = datasets_bwd,
                              model_obs_types = model_obs_types,
-                             n_particle = 200_000, 
+                             n_particle = 20_000, 
                              direction = "backward", 
                              output = "Vector");
 
 # Run the backward filter
 bwd = particle_filter(timeline = timeline,
                       xinit = xinit,
-                      yobs = yobs,
+                      yobs = yobs_bwd,
                       model_move = model_move,
                       n_record = 500,
                       direction = "backward");
