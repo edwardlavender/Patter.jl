@@ -38,7 +38,7 @@ function asDataFrame(; x::Rasters.Raster, drop_missing::Bool = true)
     if drop_missing 
         dropmissing!(xyz, :map_value)
         if nrow(xyz) == 0
-            @warn "The map only contains missing values: empty DataFrame returned."
+            julia_warning("The map only contains missing values: empty DataFrame returned.")
         end 
     end
     return xyz

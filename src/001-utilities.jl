@@ -1,5 +1,17 @@
+using Crayons
 using DataFrames
 using Dates
+
+# julia_warning()
+# * This function returns 'warning' messages in red
+# * In Patter.jl, we use julia_warning() rather than @warn because the former also forces display on Windows 
+function julia_warning(msg::String)
+    crayon = Crayon(foreground = :red)
+    display(crayon("Warning: " * msg))
+    nothing
+end 
+
+# julia_warning("This is a warning!")
 
 # Check the names of a dataframe included required (req) entries
 function check_names(input::DataFrame, req)
