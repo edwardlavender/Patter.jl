@@ -2,8 +2,8 @@ using Distributions
 using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
-export ModelObsAcousticLogisTrunc, ModelObsAcousticLogisStd
-export ModelObsDepthUniform, ModelObsDepthNormalTrunc, ModelObsDepthNormal
+export ModelObsAcousticLogisTrunc, ModelObsAcousticContainer
+export ModelObsDepthUniform, ModelObsDepthNormalTrunc
 
 
 """
@@ -47,6 +47,15 @@ To simulate an acoustic observation (``y^{(A)}_{t, k} \\in {0, 1}``) from this m
 y^{(A)}_{t, k} | \\textit{\\textbf{s}}_t \\sim \\text{Bernoulli}(p_{k,t}(\\textit{\\textbf{s}}_t))
 ```
 via [`Patter.simulate_obs()`](@ref).
+
+## `ModelObsAcousticContainer`
+
+`ModelObsAcousticContainer` is a `ModelObs` structure for an acoustic container. Acoustic containers define the maximum possible distance of an individual from a receiver that recorded the next detection. This contains the following fields:
+- `sensor_id`: An integer that defines the sensor (receiver) ID for the receiver that recorded the next detection;
+- `receiver_x`, `receiver_y`: Floats that define the x and y coordinates of the receiver;
+- `radius`: A Float that defines the radius of the acoustic container; 
+
+Acoustic containers are a computational device used to facilitate convergence in the particle filter. At each time step, particles are permitted or killed depending on whether or not the distance between a particle and the receiver(s) that recorded the next detection(s) is ≤ `radius`.
 
 ## `ModelObsDepthUniform`
 
@@ -200,6 +209,34 @@ function logpdf_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int6
 
 end
 @doc (@doc ModelObs) logpdf_obs
+
+
+#########################
+#########################
+#### Acoustic containers
+
+struct ModelObsAcousticContainer <: ModelObs
+    sensor_id::Int64
+    receiver_x::Float64
+    receiver_y::Float64
+    radius::Float64
+end
+@doc (@doc ModelObs) ModelObsAcousticContainer
+
+# A simulate_obs() method is not currently provided for ModelObsAcousticContainer
+# * Acoustic containers are calculated post-hoc from acoustic observations
+# function simulate_obs(state::State, model_obs::ModelObsAcousticContainer, t::Int64)
+# 
+# end
+
+function logpdf_obs(state::State, model::ModelObsAcousticContainer, t::Int64, obs::Int64)
+    # Calculate distance between particle (state) and receiver
+    dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
+    # Only particles within max_dist are permitted
+    # * radius is a pre-calculated field in model
+    # * (radius = receiver_gamma + (receiver_timestep - t) * mobility)
+    return ifelse(dist <= model.radius, 0.0, -Inf)
+end
 
 
 #########################
