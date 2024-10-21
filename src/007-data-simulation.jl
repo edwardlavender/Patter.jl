@@ -36,7 +36,11 @@ function simulate_path_walk(; xinit = Vector, model_move::ModelMove, timeline::V
     # Run simulation
     for t in 2:nt
         for i in 1:np
-            xout[i, t] = simulate_move(xout[i, t - 1], model_move, t, Inf)[1]
+            xi, lwi = simulate_move(xout[i, t - 1], model_move, t, 1_000_000)
+            if isinf(lwi)
+                error("`simulate_path_walk()` failed to simulate a valid step at time $t after 1 million trials. It is likely that `model_move` (which includes the study domain [map] and the movement model) has been incorrectly specified.")
+            end 
+            xout[i, t] = xi
         end
     end 
 
