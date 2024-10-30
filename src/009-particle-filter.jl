@@ -222,7 +222,6 @@ function particle_filter(
         # * We iterate once over particles b/c this is thread safe
         timestamp            = timeline[t]
         has_obs_at_timestamp = haskey(yobs, timestamp)
-        yobs_at_timestamp    = yobs[timestamp]
         @threads for i in 1:np
             if isfinite(lw[i])
                 # Move particles
@@ -232,7 +231,7 @@ function particle_filter(
                 end
                 # Evaluate likelihoods
                 if has_obs_at_timestamp && isfinite(lw[i])
-                    for (obs, model) in yobs_at_timestamp
+                    for (obs, model) in yobs[timestamp]
                         lw[i] += logpdf_obs(xnow[i], model, t, obs)
                     end
                 end
