@@ -7,7 +7,7 @@ using Dates
 # * In Patter.jl, we use julia_warning() rather than @warn because the former also forces display on Windows 
 function julia_warning(msg::String)
     crayon = Crayon(foreground = :red)
-    display(crayon("Warning: " * msg))
+    display(crayon("\nWarning: " * msg))
     nothing
 end 
 
