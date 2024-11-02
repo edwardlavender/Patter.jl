@@ -104,6 +104,8 @@ A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t â
     - `n_record` particles are resampled at each time step and recorded in memory;
 - `n_resample`: A number that defines the effective sample size for resampling:
     - Particles are resampled when the effective sample size <= `n_resample`;
+- `t_resample`: `nothing`, an `integer` or a Vector of `integer`s that define the time step(s) at which to force resampling;
+    - Particles are resampled at `t_resample` regardless of the effective sample size;
 - `direction:` A `String` that defines the direction of the filter:
     - `"forward"` runs the filter forwards in time;
     - `"backward"` runs the filter backwards in time;
@@ -124,7 +126,7 @@ Observations are used to weight simulated particles. To simulate observations fo
 
 ## Resampling
 
-Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`resample()`](@ref)), when the effective sample size is less than or equal to `n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
+Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`resample()`](@ref)), at time steps in `t_resample` or when the effective sample size is less than or equal to `n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
 
 The algorithm continues in this way, iterating over the `timeline`, simulating, weighting and (re)sampling particles. At each time step, `n_record` particles are saved in memory. If the function fails to converge, a warning is returned alongside the outputs up to that time step. Otherwise, the function will continue to the end of the time series.
 
@@ -167,6 +169,7 @@ function particle_filter(
     n_move::Int = 100_000,
     n_record::Int = 1000,
     n_resample::Float64 = Float64(n_record),
+    t_resample::Union{Nothing, Int, Vector{Int}},
     direction::String = "forward")
 
     #### Define essential parameters
@@ -176,6 +179,8 @@ function particle_filter(
     np = length(xinit)
     # Number of recorded particles
     nr = n_record
+    # Use t_resample
+    do_t_resample = !isnothing(t_resample)
 
     #### Check user inputs
     # Check time line
@@ -268,10 +273,11 @@ function particle_filter(
         # (A deep copy is implicitly made here via the subsetting)
         xout[:, t] .= xnow[idx[1:nr]]
         # Optionally resample particles for next iteration
-        if ess[t] <= n_resample
+        do_resample = (do_t_resample && (t in t_resample)) || (ess[t] <= n_resample)
+        if do_resample
             xpast .= xnow[idx]
             lw .= zero(Float64)
-        else
+        else 
             xpast .= xnow
         end
 
@@ -322,6 +328,7 @@ function particle_filter_iter(
     n_move::Int = 100_000,
     n_record::Int = 1000,
     n_resample::Float64 = Float64(n_record),
+    t_resample::Union{Nothing, Int, Vector{Int}},
     n_iter::Int64 = 1,
     direction::String = "forward")
 
@@ -336,6 +343,7 @@ function particle_filter_iter(
                               n_move = n_move,
                               n_record = n_record,
                               n_resample = n_resample,
+                              t_resample = t_resample,
                               direction  = direction)
         if out.convergence
             trial = Inf
