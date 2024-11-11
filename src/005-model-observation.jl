@@ -232,7 +232,7 @@ end
 function logpdf_obs(state::State, model::ModelObsAcousticContainer, t::Int64, obs::Int64)
     # Calculate distance between particle (state) and receiver
     dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
-    # Only particles within max_dist are permitted
+    # Only particles within model.radius are permitted
     # * radius is a pre-calculated field in model
     # * (radius = receiver_gamma + (receiver_timestep - t) * mobility)
     return ifelse(dist <= model.radius, 0.0, -Inf)
