@@ -3,6 +3,7 @@ using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticContainer
+# export ModelObsCaptureContainer
 export ModelObsDepthUniform, ModelObsDepthNormalTrunc
 
 
@@ -237,6 +238,23 @@ function logpdf_obs(state::State, model::ModelObsAcousticContainer, t::Int64, ob
     # * (radius = receiver_gamma + (receiver_timestep - t) * mobility)
     return ifelse(dist <= model.radius, 0.0, -Inf)
 end
+
+
+#########################
+#########################
+#### Capture containers
+
+# struct ModelObsCaptureContainer <: ModelObs
+#     sensor_id::Int64
+#     capture_x::Float64
+#     capture_y::Float64
+#     radius::Float64
+# end
+
+# function logpdf_obs(state::State, model::ModelObsCaptureContainer, t::Int64, obs::Int64)
+#     dist = distance(state.x, state.y, model.capture_x, model.capture_y)
+#     return ifelse(dist <= model.radius, 0.0, -Inf)
+# end
 
 
 #########################
