@@ -77,8 +77,16 @@ function assemble_yobs(; datasets::Vector, model_obs_types::Vector{DataType})
 
     # Initialise empty dictionary 
     # yobs = Dict{DateTime, Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}}()
-    entry = dict_initialise_entry(datasets, model_obs_types)
-    yobs = dict_initialise(entry)
+    # A) Initialise Dict() with generic ModelObs type
+    # * This is MUCH slower for <= ModelObs types (e.g., 7 min -> 45 min)
+    # * But about twice as fast for >4 4 ModelObs types (e.g., 2.5 hr -> 1 hour)
+    # entry = Vector{Tuple{T, ModelObs} where T <: Real}[]
+    # yobs = Dict{Dates.DateTime, Vector{Tuple{T, ModelObs} where T <: Real}}()
+    # B) Initialise Dict with specific ModelObs types
+    # * This is faster for <= 3 ModelObs types (e.g., 7 min)
+    # * But Union{} is VERY slow for >= 4 ModelObs types (e.g., 2.5 hr)
+    entry = dict_initialise_entry(datasets, model_obs_types) 
+    yobs = dict_initialise(entry) 
     entry = entry[]
 
     # Iterate over datasets/models
