@@ -69,7 +69,7 @@ function resample(w::Vector{Float64}, n::Int = length(w))
         # Calculate the next sample point
         U = r + (m - 1) * (1 / n)
         # Find the first weight that puts us past the sample point
-        while c < U
+        while c < U && i < n
             i += 1
             c = c + w[i]
         end
