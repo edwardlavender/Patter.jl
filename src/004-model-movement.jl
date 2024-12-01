@@ -316,7 +316,7 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     # * - Provide locations
     # * - Get index of particles within mobility
     # * - This may improve speed by eliminating the need to iterative over all particles in the smoother 
-    if model_move.mobility > length
+    if length > model_move.mobility
         return -Inf
     end
     # Calculate log(abs(determinate))
