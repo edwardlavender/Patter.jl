@@ -60,6 +60,9 @@ Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
 
 """
 function resample(w::Vector{Float64}, n::Int = length(w))
+    if all(w .== 0) || all(isnan.(w))
+        error("All elements are zero/NaN.")
+    end
     w = w ./ sum(w)
     idx = zeros(Int, n)
     r = rand() * 1/n
@@ -169,7 +172,7 @@ function particle_filter(
     n_move::Int = 100_000,
     n_record::Int = 1000,
     n_resample::Float64 = Float64(n_record),
-    t_resample::Union{Nothing, Int, Vector{Int}},
+    t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
     direction::String = "forward")
 
     #### Define essential parameters
