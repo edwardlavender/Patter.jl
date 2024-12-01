@@ -81,6 +81,9 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
             end
         end
         # Normalise weights & evaluate ESS
+        if all(w .== 0)
+            error("All weights (from xbwd[k, t] to xfwd[j, t - 1]) are zero at time step $t.")
+        end
         w .= w ./ sum(w)
         ess[t] = 1 / sum(abs2, w)
         # Resample particles & store
