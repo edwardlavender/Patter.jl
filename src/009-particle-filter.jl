@@ -60,7 +60,7 @@ Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
 
 """
 function resample(w::Vector{Float64}, n::Int = length(w))
-    if all(w .== 0) || all(isnan.(w))
+    if all(x -> x == 0 || isnan(x), w)
         error("All elements are zero/NaN.")
     end
     w = w ./ sum(w)
