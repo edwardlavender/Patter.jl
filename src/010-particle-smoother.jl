@@ -51,29 +51,43 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
 
     #### Set up
-    # Dimension of input state
+    # Identify dimension of input state
     zdim = hasfield(typeof(xfwd[1]), :z)
-    # Reset map_value 
-    # * We set map_value to 0.0 or 1.0 if vmap is supplied
-    # * This defines, for each state_from, whether or not movements from that state is always valid
-    # * The one-time lookup for each state should speed up logpdf_move()
+    # Use vmap, if supplied
+    # * vmap may be supplied for 'horizontal' (2D) movement models 
+    # * If vmap is supplied, we update we update xfwd.map_value to 0.0 or 1.0 
+    # * If we are within mobility of the coastline, map_value -> 0.0
+    # * map_value = 0.0 indicates that not all moves from that point are valid 
+    # * This is a flag that we need to simulate the normalisation constant in logpdf_move()
     if !isnothing(vmap)
         xbwd = edit_map_value(xbwd, vmap)
     end 
-    # Matrix for smoothed particles
+    # Define smoothed particles matrix 
+    # (rows: particles; columns: time steps)
     xout = similar(xfwd)
     xout[:, 1] .= xbwd[:, 1]
     xout[:, end] .= xfwd[:, end]
+    # Define particle indices
+    # * If the two filters are incompatible (all weights zero), 
+    # * ... we sample n_fwd_half and n_bwd_half particles from  
+    # * ... the forward and backward filters respectively
     np, nt = size(xout)
-    # ESS vector
-    ess = zeros(nt)
-    ess[1] = NaN
-    ess[nt] = NaN 
-    # Least recently used cache 
+    half = (np ÷ 2)
+    n_fwd_half = length(1:half)
+    n_bwd_half = length((half + 1):np)
+    warn_zero_weights = false 
+    # Initialise ESS vector
+    ess     = zeros(nt)
+    ess[1]  = np # = 1 / sum(abs2, w) given equal weights from filter
+    ess[nt] = np 
+    # Set up LRU cache 
+    # * This caches movement normalisation constants for s_{i, t} in logpdf_move()
     cache = LRU{eltype(xfwd), Float64}(maxsize = np)
 
-    #### Run two-filter formula
+    #### Run smoothing
     @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
+
+        # Compute weights  
         w = zeros(np)
         @threads for k in 1:np
             for j in 1:np
@@ -81,18 +95,39 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
                 w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, vmap, n_sim, cache))
             end
         end
-        # Normalise weights & evaluate ESS
-        if all(w .== 0)
-            error("All weights (from xbwd[k, t] to xfwd[j, t - 1]) are zero at time step $t.")
-        end
-        w .= w ./ sum(w)
-        ess[t] = 1 / sum(abs2, w)
-        # Resample particles & store
-        idx = resample(w, np)
-        xout[:, t] .=  xbwd[idx, t]
+        
+        # Validate weights & implement resampling 
+        if any(w .> 0)
+            # (A) If there are positive weights, normalise, compute ESS & resample
+            w .= w ./ sum(w)
+            ess[t] = 1 / sum(abs2, w)
+            # Resample particles from xbwd & store
+            idx = resample(w, np)
+            xout[:, t] .=  xbwd[idx, t]
+        else 
+            # (B) If all weights are zero, set a warning flag 
+            # * For speed, the warning is thrown only once outside the for loop 
+            # * (as it may occur at multiple time steps)
+            warn_zero_weights = true
+            # Set ESS[t] = NaN
+            ess[t] = NaN
+            # Sample 50 % of particles from forward filter
+            xout[1:half , t] = xfwd[rand(1:np, n_fwd_half), t]
+            # Sample 50 % of particles from backward filter 
+            xout[(half + 1):end, t] = xbwd[rand(1:np, n_bwd_half), t] 
+
+        end 
+
     end
 
-    #### Reset map_value
+    #### Implement post-processing 
+    # Warn for smoothing failures
+    if warn_zero_weights
+        nan_count = count(isnan, ess)
+        nan_perc  = round(nan_count / length(ess) * 100, digits = 2)
+        julia_warning("All smoothing weights (from xbwd[k, t] to xfwd[j, t - 1]) are zero at $nan_count time step(s) ($nan_perc %).")
+    end 
+    # Reset map_value
     xout = edit_map_value(xout, model_move.map)
 
     #### Return outputs
