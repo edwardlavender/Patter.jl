@@ -112,9 +112,11 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
             # Set ESS[t] = NaN
             ess[t] = NaN
             # Sample 50 % of particles from forward filter
-            xout[1:half , t] = xfwd[rand(1:np, n_fwd_half), t]
+            # * We simply select the first n_fwd_half particles since
+            # * ... particles are equally weighted thanks to resampling  
+            xout[1:half , t] = xfwd[1:n_fwd_half, t]
             # Sample 50 % of particles from backward filter 
-            xout[(half + 1):end, t] = xbwd[rand(1:np, n_bwd_half), t] 
+            xout[(half + 1):end, t] = xbwd[1:n_bwd_half, t] 
 
         end 
 
