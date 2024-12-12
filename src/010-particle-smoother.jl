@@ -2,10 +2,14 @@ using Base.Threads: @threads
 using ProgressMeter: @showprogress
 
 export two_filter_smoother
-export backward_smoother
 
 """
-    two_filter_smoother(; timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, vmap, n_sim::Int)
+    two_filter_smoother(; timeline::Vector{DateTime}, 
+                        xfwd::Matrix, xbwd::Matrix, 
+                        model_move::ModelMove, 
+                        vmap::Union{GeoArray, Nothing}, 
+                        n_sim::Int, 
+                        cache::Bool)
 
 A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t âˆˆ 1:T`.
 
@@ -17,10 +21,11 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `vmap`: (optional) A `GeoArray` that defines the 'validity map' (see [`logpdf_move()`](@ref));
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (see [`logpdf_move()`](@ref));
+- `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`logpdf_move()`](@ref));
 
 # Details
 
-[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `vmap` and `n_sim` arguments support the calculate of probability densities (see [`logpdf_move()`](@ref)). 
+[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `vmap` and `n_sim` arguments support the calculate of probability densities (see [`logpdf_move()`](@ref)). For movement models for which the density only depends on fields in `xbwd` and `xfwd`, set `cache = true` to precompute and store normalisation constants for density calculations for unique `xbwd` elements. Note that since typically only a subsample of particles from [`particle_filter()`](@ref) are retained in memory, it is not guaranteed that valid moves will exist between particle pairs at all time steps. At time step(s) in which the two filters are incompatible, 50 % of particles are retained from the forward filter and 50 % from the backward filter with a warning. The effective sample size at such time steps is set to `NaN`, providing an index and counter for problematic time steps (see Returns). 
 
 # Returns 
 
@@ -45,28 +50,24 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 Fearnhead, P., Wyncoll, D., Tawn, J., [2010](https://doi.org/10.1093/biomet/asq013). A sequential smoothing algorithm with linear computational cost. Biometrika 97, 447â€“464.
 
 """
-function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, vmap = nothing, n_sim::Int = 100)
+function two_filter_smoother(;timeline::Vector{DateTime}, 
+                             xfwd::Matrix, xbwd::Matrix, model_move::ModelMove, 
+                             vmap::Union{GeoArray, Nothing} = nothing, 
+                             n_sim::Int = 100, 
+                             cache::Bool = true)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
 
     #### Set up
     # Identify dimension of input state
+    # * This is used to check if states are valid (incl. for normalisation simulation)
     zdim = hasfield(typeof(xfwd[1]), :z)
-    # Use vmap, if supplied
-    # * vmap may be supplied for 'horizontal' (2D) movement models 
-    # * If vmap is supplied, we update we update xfwd.map_value to 0.0 or 1.0 
-    # * If we are within mobility of the coastline, map_value -> 0.0
-    # * map_value = 0.0 indicates that not all moves from that point are valid 
-    # * This is a flag that we need to simulate the normalisation constant in logpdf_move()
-    if !isnothing(vmap)
-        xbwd = edit_map_value(xbwd, vmap)
-    end 
     # Define smoothed particles matrix 
     # (rows: particles; columns: time steps)
     xout = similar(xfwd)
-    xout[:, 1] .= xbwd[:, 1]
-    xout[:, end] .= xfwd[:, end]
+    xout[:, 1] = xbwd[:, 1]
+    xout[:, end] = xfwd[:, end]
     # Define particle indices
     # * If the two filters are incompatible (all weights zero), 
     # * ... we sample n_fwd_half and n_bwd_half particles from  
@@ -80,20 +81,29 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
     ess     = zeros(nt)
     ess[1]  = np # = 1 / sum(abs2, w) given equal weights from filter
     ess[nt] = np 
-    # Set up LRU cache 
-    # * This caches movement normalisation constants for s_{i, t} in logpdf_move()
-    cache = LRU{eltype(xfwd), Float64}(maxsize = np)
+
+    #### Precomputations
+    # Precompute normalisation constants if cache = true
+    # * This is possible for movement models for which the density only depends on `xbwd` fields 
+    # * Precomputation is faster b/c logpdf_move_normalisations() is multi-threaded, which improves speed
+    # * Whereas the smoothing code is faster if single-threaded 
+    if cache
+        cache_norm_constants = logpdf_move_normalisations(xbwd, model_move, vmap, n_sim)
+    else
+        cache_norm_constants = nothing 
+    end  
 
     #### Run smoothing
     @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
 
-        # Compute weights  
+        # Compute weights
+        # * Single-threaded implementation is faster  
         w = zeros(np)
-        @threads for k in 1:np
+        for k in 1:np
             for j in 1:np
                 # Evaluate probability density of movement between locations (i.e., the weight)
-                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, vmap, n_sim, cache))
-            end
+                w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, vmap, n_sim, cache_norm_constants))
+             end
         end
         
         # Validate weights & implement resampling 
@@ -103,7 +113,7 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
             ess[t] = 1 / sum(abs2, w)
             # Resample particles from xbwd & store
             idx = resample(w, np)
-            xout[:, t] .=  xbwd[idx, t]
+            xout[:, t] =  xbwd[idx, t]
         else 
             # (B) If all weights are zero, set a warning flag 
             # * For speed, the warning is thrown only once outside the for loop 
@@ -129,8 +139,6 @@ function two_filter_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, xbwd::Ma
         nan_perc  = round(nan_count / length(ess) * 100, digits = 2)
         julia_warning("All smoothing weights (from xbwd[k, t] to xfwd[j, t - 1]) are zero at $nan_count time step(s) ($nan_perc %).")
     end 
-    # Reset map_value
-    xout = edit_map_value(xout, model_move.map)
 
     #### Return outputs
     # Follow particle_filter() format
@@ -200,7 +208,7 @@ function backward_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, model_move
     # Define smoothed particles matrix 
     # (rows: particles; columns: time steps)
     xout = similar(xfwd)
-    xout[:, end] .= xfwd[:, end]
+    xout[:, end] = xfwd[:, end]
     np, nt = size(xout)
     # Initialise weights
     # * Particles from the forward filter have uniform weights (w) thanks to resampling
@@ -220,7 +228,7 @@ function backward_smoother(;timeline::Vector{DateTime}, xfwd::Matrix, model_move
         # Compute pairwise densities f(s_{j, t + 1} | f(s_{i, t})  * w
         # * We use a matrix as densities may be directional 
         w_i_to_j = zeros(Float64, np, np)
-        @threads for i in 1:np
+        for i in 1:np
             for j in 1:np
                 # Compute density of move from s_{i, t} to s_{j, t + 1} * w
                 w_i_to_j[i, j] = exp(logpdf_move(xfwd[i, t], xfwd[j, t + 1], zdim, model_move, t, vmap, n_sim, cache) + lw[i])

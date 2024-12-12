@@ -263,11 +263,13 @@ end
 
 """
     logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                model_move::ModelMove, t::Int, vmap, 
+                model_move::ModelMove, 
+                t::Int, 
+                vmap::Union{GeoArray, Nothing}, 
                 n_sim::Int,
-                cache::LRU)
+                cache::Union{LRU, Nothing})
     
-Evaluate the log probability of a movement step between two [`State`](@ref)s (`state_from` and `state_to`). 
+Evaluate the log probability of a movement between two [`State`](@ref)s (`state_from` and `state_to`). 
 
 # Arguments
 
@@ -276,13 +278,13 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` and `state_to` contain a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `vmap`: (optional) A `GeoArray` that maps the region within which movements between `state_from` and `state_to` are always legal. Valid regions must equal 1. `vmap` can be provided if `state_from` and `state_to` are [`StateXY`](@ref) instances;
+- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state_from` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state_from` and `state_to` are [`StateXY`](@ref) instances);
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
-- `cache`: A Least Recently Used (LRU) Cache;
+- `cache`: (optional) A Least Recently Used (LRU) Cache for normalisation constants;
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `state_from` and `state_to` are two-dimensional states (i.e., [`StateXY`](@ref) instances) a 'validity map' can be provided. This is a `GeoArray` that define the region within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, t, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `model_move` is 'horizontal (e.g., `state_from` and `state_to` are two-dimensional, [`StateXY`](@ref) instances), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -298,13 +300,13 @@ Evaluate the log probability of a movement step between two [`State`](@ref)s (`s
 
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
-                     model_move::ModelMove, t::Int, vmap, n_sim::Int = 100, 
-                     cache::LRU = LRU{eltype(state_from), Float64}(maxsize = 100)) 
+                     model_move::ModelMove, t::Int, vmap::Union{GeoArray, Nothing}, n_sim::Int, 
+                     cache::Union{LRU{<:State, Float64}, Nothing}) 
 
     #### Validate state 
     # (This check is cheap)
     if !state_is_valid(state_to, state_zdim)
-        return -Inf
+         return -Inf
     end
 
     #### Evaluate step lengths and angles 
@@ -322,23 +324,15 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     # Calculate log(abs(determinate))
     log_det = -0.5 * log(x^2 + y^2)
     
-    #### Approximate the normalisation constant
-    # (A) Use mobility grid 
-    # * Set normalisation constant to 1.0 if the individual is within a 'validity map'
-    # * `vmap` can be provided for 2D states
-    # * This is a TRUE/FALSE (1.0, 0.0) GeoArray
-    # * In the smoother, `state_from.map_value` has been updated by `vmap`
-    # * Ones define the region within which a move is always valid
-    # * (i.e., the sea of the study area, shrunk by mobility)
-    # * This code is implemented outside of logpdf_move_normalisation(): caching with the validity map is MUCH slower
-    if !isnothing(vmap) && isone(state_from.map_value)
-        # log(1.0)
-        log_z = 0.0 
-    # (B) Run MC simulation 
-    # * Run simulation
-    # * Caching is MUCH faster when MC iterations are required
+    #### Compute normalisation constant
+    if !isnothing(cache)
+        # Lookup normalisation constant from cache
+        # * Only `state_from` used, other arguments effectively ignored  
+        log_z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, vmap, n_sim, cache)
     else 
-        log_z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, n_sim, cache)
+        # Compute normalisation constant on the fly
+        # * E.g., For movement models that depend on both `state_from` and `t`
+        log_z = logpdf_move_normalisation(state_from, state_zdim, model_move, t, vmap, n_sim)
     end 
 
     #### Evaluate density 
@@ -349,23 +343,31 @@ end
 
 """
     logpdf_move_normalisation(state::State, state_zdim::Bool, 
-                              model_move::ModelMove, t::Int, n_sim::Int, 
+                              model_move::ModelMove, t::Int, 
+                              vmap::Union{GeoArray, Nothing},
+                              n_sim::Int)
+
+    logpdf_move_normalisation(state::State, state_zdim::Bool, 
+                              model_move::ModelMove, t::Int, 
+                              vmap::Union{GeoArray, Nothing},
+                              n_sim::Int, 
                               cache::LRU)
 
 Approximate the (log) normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
 
 # Arguments
 
-- `state_from`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
-- `state_zdim`: A `Boolian` that defines whether or not `state_from` contains a `z` (depth) dimension;
+- `state`: A [`State`](@ref) instance that defines a [`State`](@ref) from which the animal moved;
+- `state_zdim`: A `Boolian` that defines whether or not `state` contains a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
+- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state` is a [`StateXY`](@ref) instance);
 - `n_sim`: An integer that defines the number of Monte Carlo simulations;
 - `cache`: A Least Recently Used (LRU) cache;
 
 # Details
 
-This internal function runs a Monte Carlo simulation of `n_sim` iterations to estimate the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state_from`) into another. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state_from`. The (log) normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+This internal function computes the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state`) into another (required to account for the truncation of the movement model by land). If `model_move` is 'horizontal (e.g., `state` is a two-dimensional, [`StateXY`](@ref) instance), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements from that `state` are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is used to estimate the normalisation constant. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state`. In the cached method, the (log) normalisation constant for a given [`State`](@ref) is stored in a LRU cache. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns 
 
@@ -380,28 +382,66 @@ This internal function runs a Monte Carlo simulation of `n_sim` iterations to es
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """
-function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, n_sim::Int)
+function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, vmap::Union{GeoArray, Nothing}, n_sim::Int)
 
-    # Run simulation 
-    k = 0.0
-    for i in 1:n_sim
-        # Simulate an (unrestricted) step into a new location 
-        pstate = simulate_step(state, model_move, t)
-        # Validate the step
-        if state_is_valid(pstate, state_zdim)
-            k += 1.0
+    if !isnothing(vmap) && isone(extract(vmap, state.x, state.y))
+        # (A) Use vmap 
+        # * vmap may be supplied for 'horizontal' (2D) movement models 
+        # * vmap elements = 0 or 1 
+        # * vmap = 1.0 indicates that all moves from that point are valid (land in water)
+        log_z = 0.0 
+
+    else 
+        # (B) Compute normalisation constant via simulation
+        # Run simulation 
+        k = 0.0
+        for i in 1:n_sim
+            # Simulate an (unrestricted) step into a new location 
+            pstate = simulate_step(state, model_move, t)
+            # Validate the step
+            if state_is_valid(pstate, state_zdim)
+                k += 1.0
+            end
         end
-    end
+        # Evaluate posterior mean
+        # * This assumes a Beta(1, 1) prior
+        log_z = log((k + 1) / (n_sim + 2))
+    end 
 
-    # Evaluate posterior mean
-    # * This assumes a Beta(1, 1) prior
-    log((k + 1) / (n_sim + 2))
+    return log_z
 
 end
 
 # Cached version 
-function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::ModelMove, t::Int, n_sim::Int, cache::LRU)
+# * A) Used in logpdf_move_normalisations() to populate the cache
+# * B) Used in logpdf_move() to lookup from the cache 
+function logpdf_move_normalisation(state::State, state_zdim::Bool, 
+                                   model_move::ModelMove, t::Int, 
+                                   vmap::Union{GeoArray, Nothing}, 
+                                   n_sim::Int, 
+                                   cache::LRU{<:State, Float64})
     get!(cache, state) do
-        logpdf_move_normalisation(state, state_zdim, model_move, t, n_sim)
+        logpdf_move_normalisation(state, state_zdim, model_move, t, vmap, n_sim)
     end
 end
+
+# Precompute normalisation constants for all unique states 
+function logpdf_move_normalisations(states::Matrix, model_move::ModelMove, vmap::Union{GeoArray, Nothing}, n_sim::Int)
+
+    # Identify dimension of input state
+    state_zdim = hasfield(typeof(states[1]), :z)
+    
+    # Prepare cache for normalisation constants
+    unique_states = unique(states)
+    cache = LRU{eltype(unique_states), Float64}(maxsize = length(unique_states))
+
+    # Populate cache with normalisation constants
+    # * If the cache is used, `t` is assumed irrelevant and simply set to 1 here
+    @threads for state in unique_states
+        logpdf_move_normalisation(state, state_zdim, model_move, 1, vmap, n_sim, cache)
+    end
+
+    # Return cache 
+    return cache 
+
+end 
