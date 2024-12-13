@@ -104,15 +104,3 @@ function state_is_valid(state::State, zdim::Bool)
         return is_valid(state.map_value) 
     end 
 end 
-
-# Edit `map_value` for a Matrix of State(s)
-function edit_map_value(state::Matrix{<:State}, map::GeoArray)
-    StateType   = eltype(state)
-    StateFields = fieldnames(typeof(state[1]))
-    @threads for i in eachindex(state)
-        s = state[i]
-        v = [field == :map_value ? extract(map, s.x, s.y) : getfield(s, field) for field in StateFields]
-        state[i] = StateType(v...)
-    end
-    return state
-end 
