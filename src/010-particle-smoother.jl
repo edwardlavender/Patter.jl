@@ -85,8 +85,6 @@ function two_filter_smoother(;timeline::Vector{DateTime},
     #### Precomputations
     # Precompute normalisation constants if cache = true
     # * This is possible for movement models for which the density only depends on `xbwd` fields 
-    # * Precomputation is faster b/c logpdf_move_normalisations() is multi-threaded, which improves speed
-    # * Whereas the smoothing code is faster if single-threaded 
     if cache
         cache_norm_constants = logpdf_move_normalisations(xbwd, model_move, vmap, n_sim)
     else
@@ -97,9 +95,9 @@ function two_filter_smoother(;timeline::Vector{DateTime},
     @showprogress desc = "Running two-filter smoother..." for t in 2:(nt - 1)
 
         # Compute weights
-        # * Single-threaded implementation is faster  
+        # * Multi-threaded implementation is somewhat faster with Dict() cache_norm_constants formulation 
         w = zeros(np)
-        for k in 1:np
+        @threads for k in 1:np
             for j in 1:np
                 # Evaluate probability density of movement between locations (i.e., the weight)
                 w[k] += exp(logpdf_move(xbwd[k, t], xfwd[j, t - 1], zdim, model_move, t, vmap, n_sim, cache_norm_constants))

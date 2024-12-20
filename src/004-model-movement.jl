@@ -1,5 +1,3 @@
-using LRUCache: LRU
-
 export ModelMove, ModelMoveXY, ModelMoveXYZD
 
 
@@ -267,7 +265,7 @@ end
                 t::Int, 
                 vmap::Union{GeoArray, Nothing}, 
                 n_sim::Int,
-                cache::Union{LRU, Nothing})
+                cache::Union{Dict, Nothing})
     
 Evaluate the log probability of a movement between two [`State`](@ref)s (`state_from` and `state_to`). 
 
@@ -280,7 +278,7 @@ Evaluate the log probability of a movement between two [`State`](@ref)s (`state_
 - `t`: An integer that defines the time step;
 - `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state_from` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state_from` and `state_to` are [`StateXY`](@ref) instances);
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
-- `cache`: (optional) A Least Recently Used (LRU) Cache of normalisation constants including `state_from`;
+- `cache`: (optional) A Dict of normalisation constants including `state_from`;
 
 # Details
 
@@ -301,7 +299,7 @@ Evaluate the log probability of a movement between two [`State`](@ref)s (`state_
 """
 function logpdf_move(state_from::State, state_to::State, state_zdim::Bool, 
                      model_move::ModelMove, t::Int, vmap::Union{GeoArray, Nothing}, n_sim::Int, 
-                     cache::Union{LRU{<:State, Float64}, Nothing}) 
+                     cache::Union{Dict{<:State, Float64}, Nothing}) 
 
     #### Validate state 
     # (This check is cheap)
@@ -409,18 +407,18 @@ function logpdf_move_normalisations(states::Matrix, model_move::ModelMove, vmap:
 
     # Identify dimension of input state
     state_zdim = hasfield(typeof(states[1]), :z)
-    
-    # Prepare cache for normalisation constants
-    unique_states = unique(states)
-    cache = LRU{eltype(unique_states), Float64}(maxsize = length(unique_states))
-
-    # Populate cache with normalisation constants
+ 
+    # Compute normalisation constants
     # * If the cache is used, `t` is assumed irrelevant and simply set to 1 here
-    @threads for state in unique_states
-        get!(cache, state) do
-            logpdf_move_normalisation(state, state_zdim, model_move, 1, vmap, n_sim)
-        end
+    # * This operation is faster if multi-threaded
+    unique_states = unique(states)
+    constants = Vector{Pair{eltype(unique_states), Float64}}(undef, length(unique_states))
+    @threads for i in eachindex(unique_states)
+        constants[i] = unique_states[i] => logpdf_move_normalisation(unique_states[i], state_zdim, model_move, 1, vmap, n_sim)
     end
+    
+    # Move constants into dictionary
+    cache = Dict(constants)
 
     # Return cache 
     return cache 
