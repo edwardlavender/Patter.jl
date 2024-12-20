@@ -188,8 +188,7 @@ the two-dimensional (x, y) location of our animal through time (that is,
 the animal’s ‘state’ is an object of type `StateXY`). The animal can
 move up to 750 m in two minutes, which is the resolution at which we
 will model movement, and we formulate a random walk model (using a
-`ModelMove` structure) accordingly based on step lengths and turning
-angles:
+`ModelMove` structure) accordingly based on step lengths and headings:
 
 ``` julia
 # Formulate a movement model
