@@ -12,14 +12,14 @@ export State, StateXY, StateXYZ, StateXYZD
 The following sub-types are built-in:
 
 -   `StateXY(map_value, x, y)`: Used for two dimensional (x, y) states ;
--   `StateXYZD(map_value, x, y, z, angle)`: Used for four-dimensional (x, y, z, direction) states;
+-   `StateXYZD(map_value, x, y, z, heading)`: Used for four-dimensional (x, y, z, direction) states;
 
 These contain the following fields: 
 
 -   `map_value`: The value of the movement map at coordinates (x, y), required for all `State`s (see [`ModelMove`](@ref));
 -   `x`, `y`:  Floats that define the animal's x and y coordinates, required for all `State`s;
 -   `z`: A float that defines the animal's z (depth) coordinate, required for all `State`s with a depth component;
--   `angle`: A float that defines the turning angle, required by `StateXYZD`;
+-   `heading`: A float that defines the heading, required by `StateXYZD`;
 
 # Custom sub-types
 
@@ -84,7 +84,7 @@ struct StateXYZD <: State
     y::Float64
     z::Float64
     # Horizontal direction
-    angle::Float64  
+    heading::Float64  
 end 
 @doc (@doc State) StateXYZD
 

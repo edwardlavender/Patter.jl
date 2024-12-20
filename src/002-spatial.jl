@@ -202,6 +202,6 @@ end
 # Compute the smallest absolute rotation between two angles.
 # """
 function abs_angle_difference(a1, a2)
-    delta_angle = mod(abs(a1 - a2), 2π)
-    min(delta_angle, 2π - delta_angle)
+    angle_delta = mod(abs(a1 - a2), 2π)
+    min(angle_delta, 2π - angle_delta)
 end

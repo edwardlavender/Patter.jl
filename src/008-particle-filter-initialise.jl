@@ -254,8 +254,8 @@ function states_init(state_type::Type{StateXYZD}, coords)
     N = nrow(coords)
       # Add z coordinate
     @transform! coords :z = :map_value .* rand(N)
-    # Add angle
-    @transform! coords :angle = rand(N) .* 2 .* π
+    # Add heading
+    @transform! coords :heading = rand(N) .* 2 .* π
     return coords
 end 
 

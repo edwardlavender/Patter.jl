@@ -14,16 +14,16 @@ export ModelMove, ModelMoveXY, ModelMoveXYZD
 
 [`ModelMove`](@ref) sub-types define the components of different kinds of movement model. The following sub-types are built-in:
 
--   `ModelMoveXY(map, mobility, dbn_length, dbn_angle)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and turning angles (`dbn_angle`);
--   `ModelMoveXYZD(map, mobility, dbn_length, dbn_angle_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), changes in turning angle (`dbn_angle`) and changes in depth (`dbn_z_delta`);
+-   `ModelMoveXY(map, mobility, dbn_length, dbn_heading)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and headings (`dbn_heading`);
+-   `ModelMoveXYZD(map, mobility, dbn_length, dbn_heading_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_heading_delta`) and changes in depth (`dbn_z_delta`);
 
 These contain the following fields: 
 
 -   `map`: A field that defines the arena within which movement occurs. The coordinate reference system of the `map` must align with the other components of the movement model, which typically require a Universal Transverse Mercator (planar) projection with coordinates in metres. `map` is required by all movement models;
 -   `mobility`: A number that defines the maximum movement distance between two time steps;
 -   `dbn_length`: The distribution of step lengths;
--   `dbn_angle`: The distribution of turning angles;
--   `dbn_angle_delta`: The distribution of changes in turning angle;
+-   `dbn_heading`: The distribution of headings;
+-   `dbn_heading_delta`: The distribution of turning angles;
 -   `dbn_z_delta`: The distribution of changes in depth;
 
 # Custom sub-types
@@ -37,8 +37,8 @@ struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
     map::T
     # Distribution for step lengths
     dbn_length::U
-    # Distribution for turning angles
-    dbn_angle::V
+    # Distribution for headings
+    dbn_heading::V
     # Distribution for changes in depth
     dbn_z_delta::W
   end
@@ -64,8 +64,8 @@ struct ModelMoveXY{T, U, V, W} <: ModelMove
     # Distribution of step lengths
     mobility::U
     dbn_length::V
-    # Distribution of turning angles
-    dbn_angle::W
+    # Distribution of headings
+    dbn_heading::W
 end 
 @doc (@doc ModelMove) ModelMoveXY
 
@@ -80,9 +80,9 @@ struct ModelMoveXYZD{T, U, V, W, X} <: ModelMove
     # Step length
     mobility::U
     dbn_length::V
-    # Change in turning angle
+    # Turning angle
     # * This must be symmetrically centred around zero
-    dbn_angle_delta::W
+    dbn_heading_delta::W
     # Change in depth 
     dbn_z_delta::X
 end 
@@ -129,9 +129,9 @@ function simulate_step end
 # RW in X and Y
 function simulate_step(state::StateXY, model_move::ModelMoveXY, t::Int64)
     length    = rand(model_move.dbn_length)
-    angle     = rand(model_move.dbn_angle)
-    x         = state.x + length * cos(angle)
-    y         = state.y + length * sin(angle)
+    heading   = rand(model_move.dbn_heading)
+    x         = state.x + length * cos(heading)
+    y         = state.y + length * sin(heading)
     map_value = extract(model_move.map, x, y)
     StateXY(map_value, x, y)
 end 
@@ -141,13 +141,13 @@ end
 
 # CRW in X, Y, Z 
 function simulate_step(state::StateXYZD, model_move::ModelMoveXYZD, t::Int64)
-    length = rand(model_move.dbn_length)
-    angle  = state.angle + rand(model_move.dbn_angle_delta)
-    x      = state.x + length * cos(angle)
-    y      = state.y + length * sin(angle)
-    z      = state.z + rand(model_move.dbn_z_delta)
+    length  = rand(model_move.dbn_length)
+    heading = state.heading + rand(model_move.dbn_heading_delta)
+    x       = state.x + length * cos(heading)
+    y       = state.y + length * sin(heading)
+    z       = state.z + rand(model_move.dbn_z_delta)
     map_value = extract(model_move.map, x, y)
-    StateXYZD(map_value, x, y, z, angle)
+    StateXYZD(map_value, x, y, z, heading)
 end 
 
 
@@ -211,7 +211,7 @@ end
 #### Evaluate densities
 
 """
-    logpdf_step(state_from::State, state_to::State, model_move::ModelMove, length, angle)
+    logpdf_step(state_from::State, state_to::State, model_move::ModelMove, length, heading)
     
 Evaluate the (unnormalised) log probability of an (unrestricted) movement step. 
 
@@ -222,11 +222,11 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
 - `length`: A float that defines the step length (i.e., the Euclidean distance between `state_from` (`x`, `y`) and `state_to` (`x`, `y`));
-- `angle`: A float that defines the angle (in polar coordinates) between `state_from` (`x`, `y`) and `state_to` (`x`, `y`);
+- `heading`: A float that defines the angle (in polar coordinates) between `state_from` (`x`, `y`) and `state_to` (`x`, `y`);
 
 # Details
 
-[`logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`logpdf_step()`](@ref) is wrapped by [`logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`logpdf_step()`](@ref) is wrapped by [`logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -243,19 +243,19 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 """
 function logpdf_step end 
 
-function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMoveXY, t::Int64, length::Float64, angle::Float64) 
-    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle, angle)
+function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMoveXY, t::Int64, length::Float64, heading::Float64) 
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading, heading)
 end 
 
 # function logpdf_step(state_from::StateXYZ, ...)
 
-function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, t::Int64, length::Float64, angle::Float64) 
+function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, t::Int64, length::Float64, heading::Float64) 
     # Compute change in depth 
     z_delta = state_to.z - state_from.z
-    # Compute change in angle 
-    angle_delta = abs_angle_difference(angle, state_from.angle)
+    # Compute turning angle 
+    heading_delta = abs_angle_difference(heading, state_from.heading)
     # Sum up logpdfs 
-    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_angle_delta, angle_delta) + logpdf(model_move.dbn_z_delta, z_delta)
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading_delta, heading_delta) + logpdf(model_move.dbn_z_delta, z_delta)
 end 
 
 
@@ -282,7 +282,7 @@ Evaluate the log probability of a movement between two [`State`](@ref)s (`state_
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, t, length, angle) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `model_move` is 'horizontal (e.g., `state_from` and `state_to` are two-dimensional, [`StateXY`](@ref) instances), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, t, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `model_move` is 'horizontal (e.g., `state_from` and `state_to` are two-dimensional, [`StateXY`](@ref) instances), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -307,10 +307,10 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
          return -Inf
     end
 
-    #### Evaluate step lengths and angles 
+    #### Evaluate step lengths and headings 
     x = state_to.x - state_from.x
     y = state_to.y - state_from.y
-    length, angle = cartesian_to_polar(x, y)
+    length, heading = cartesian_to_polar(x, y)
     # When locations exceed model_move.mobility, we set -Inf density for speed
     # * Consider NearestNeighbors.jl to build a kd tree:
     # * - Provide locations
@@ -333,7 +333,7 @@ function logpdf_move(state_from::State, state_to::State, state_zdim::Bool,
     end 
 
     #### Evaluate density 
-    logpdf_step(state_from, state_to, model_move, t, length, angle) + log_det - log_z
+    logpdf_step(state_from, state_to, model_move, t, length, heading) + log_det - log_z
 
 end 
 
