@@ -1,5 +1,5 @@
 
-# `Patter.jl`: \# `patter` <a href="https://edwardlavender.github.io/Patter.jl"><img src="docs/figures/logo.png" align="right" height="138" /></a>
+# `Patter.jl` <a href="https://edwardlavender.github.io/Patter.jl"><img src="docs/figures/logo.png" align="right" height="138" /></a>
 
 **Particle algorithms for animal movement modelling in
 [`Julia`](https://julialang.org)**
