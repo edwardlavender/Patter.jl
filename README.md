@@ -1,8 +1,8 @@
 
-# `Patter.jl`: particle algorithms for animal movement
+# `Patter.jl`: \# `patter` <a href="https://edwardlavender.github.io/Patter.jl"><img src="docs/figures/logo.png" align="right" height="138" /></a>
 
-**Particle filters, smoothers and sampling algorithms for animal
-movement modelling in [`Julia`](https://julialang.org)**
+**Particle algorithms for animal movement modelling in
+[`Julia`](https://julialang.org)**
 
 [![Project Status: Active – The project has reached a stable, usable
 state and is being actively
