@@ -499,7 +499,7 @@ smo <- patter:::pf_particles(.pf_obj = "smo")
 # Estimate UD
 ud <- map_dens(.map = map,
                .coord = smo$states,
-               sigma = spatstat.explore::bw.diggle, 
+               .sigma = bw.h, 
                .verbose = FALSE)$ud
 
 # Add home range
