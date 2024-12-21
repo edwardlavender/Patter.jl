@@ -126,7 +126,7 @@ Add corresponding methods to simulate observations via [`Patter.simulate_obs()`]
 
 Methods are implemented for all built-in sub-types. Methods can be defined for new sub-types, such as `ModelObsDepthNormal`, as follows:
 ```
-function Patter.simulate_obs(state::StateXYZD, model_obs::ModelObsDepthNormal, t::Int64)
+function Patter.simulate_obs(state::StateCXYZ, model_obs::ModelObsDepthNormal, t::Int64)
     dbn   = truncated(Normal(state.z, model_obs.depth_sigma), 0, state.map_value)
     rand(dbn)
 end

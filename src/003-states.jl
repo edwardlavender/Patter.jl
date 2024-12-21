@@ -1,6 +1,6 @@
 import Base.Threads: @threads
 
-export State, StateXY, StateXYZ, StateXYZD
+export State, StateXY, StateXYZ, StateCXY, StateCXYZ
 
 """
     State
@@ -11,19 +11,21 @@ export State, StateXY, StateXYZ, StateXYZD
 
 The following sub-types are built-in:
 
--   `StateXY(map_value, x, y)`: Used for two dimensional (x, y) states ;
--   `StateXYZD(map_value, x, y, z, heading)`: Used for four-dimensional (x, y, z, direction) states;
+-   `StateXY(map_value, x, y)`: Used for two dimensional (x, y) states;
+-   `StateXYZ(map_value, x, y, z)`: Used for three-dimensional (x, y, z) states;
+-   `StateCXY(map_value, x, y, heading)`: Used for two-dimensional (x, y) correlated states;
+-   `StateCXYZ(map_value, x, y, z, heading)`: Used for three-dimensional (x, y, z) correlated states;
 
 These contain the following fields: 
 
 -   `map_value`: The value of the movement map at coordinates (x, y), required for all `State`s (see [`ModelMove`](@ref));
 -   `x`, `y`:  Floats that define the animal's x and y coordinates, required for all `State`s;
 -   `z`: A float that defines the animal's z (depth) coordinate, required for all `State`s with a depth component;
--   `heading`: A float that defines the heading, required by `StateXYZD`;
+-   `heading`: A float that defines the heading, required by `StateCXYZ`;
 
 # Custom sub-types
 
-To define a custom sub-type, such as `StateXYZ`, simply define a `struct` that is a sub-type of `Patter.State`:
+To define a custom sub-type, such as `StateXYZ`*, simply define a `struct` that is a sub-type of `Patter.State`:
 
 ```
 struct StateXYZ <: Patter.State
@@ -35,6 +37,8 @@ struct StateXYZ <: Patter.State
     z::Float64
 end
 ```
+
+* Note that `StateXYZ` is now implemented.
 
 New states should obey the following requirements:
 -   All states must include `map_value`, `x` and `y` fields;
@@ -54,7 +58,7 @@ abstract type State end
 # * map_value, x, y are essential (see documentation)
 # * This is much faster & facilitates the implementation of the depth observation models
 
-# 2D states (2D random walk)
+# State for RW in XY
 struct StateXY <: State
     # Map value
     map_value::Float64
@@ -64,7 +68,7 @@ struct StateXY <: State
 end 
 @doc (@doc State) StateXY
 
-# 3D states (3D random walk)
+# State for RW in XYZ
 struct StateXYZ <: State
     # Map value
     map_value::Float64   
@@ -75,8 +79,20 @@ struct StateXYZ <: State
 end 
 @doc (@doc State) StateXYZ
 
-# 4D states (2D CRW and RW in z)
-struct StateXYZD <: State
+# State for CRW in XY
+struct StateCXY <: State
+    # Map value
+    map_value::Float64   
+    # Coordinates 
+    x::Float64
+    y::Float64
+    # Horizontal direction
+    heading::Float64  
+end 
+@doc (@doc State) StateCXY
+
+# State for CRW in XYZ
+struct StateCXYZ <: State
     # Map value
     map_value::Float64   
     # Coordinates 
@@ -86,7 +102,7 @@ struct StateXYZD <: State
     # Horizontal direction
     heading::Float64  
 end 
-@doc (@doc State) StateXYZD
+@doc (@doc State) StateCXYZ
 
 # """
 #     state_is_valid(state::State, zdim::Bool)

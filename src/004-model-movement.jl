@@ -1,4 +1,4 @@
-export ModelMove, ModelMoveXY, ModelMoveXYZD
+export ModelMove, ModelMoveXY, ModelMoveXYZ, ModelMoveCXY, ModelMoveCXYZ
 
 
 #########################
@@ -14,8 +14,13 @@ export ModelMove, ModelMoveXY, ModelMoveXYZD
 
 [`ModelMove`](@ref) sub-types define the components of different kinds of movement model. The following sub-types are built-in:
 
--   `ModelMoveXY(map, mobility, dbn_length, dbn_heading)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and headings (`dbn_heading`);
--   `ModelMoveXYZD(map, mobility, dbn_length, dbn_heading_delta, dbn_z_delta)`: A sub-type for four-dimensional (correlated) random walks, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_heading_delta`) and changes in depth (`dbn_z_delta`);
+-   Random walks (RWs):
+        - `ModelMoveXY(map, mobility, dbn_length, dbn_heading)`: A sub-type for two-dimensional (x, y) random walks, based distributions for step lengths (`dbn_length`) and headings (`dbn_heading`);
+        -  `ModelMoveXYZ(map, mobility, dbn_length, dbn_heading, dbn_z)`: A subtype for a RW in X, Y and Z, based on distributions for step lengths (`dbn_length`), headings (`dbn_heading`) and depth (`dbn_z`);
+
+-   Correlated random walks (CRWs):
+        -   `ModelMoveCXY(map, mobility, dbn_length, dbn_heading_delta)`: A sub-type for a CRW in X and Y, based on distributions for step lengths (`dbn_length`) and turning angles (`dbn_heading_delta`) ;
+        -   `ModelMoveCXYZ(map, mobility, dbn_length, dbn_heading_delta, dbn_z_delta)`: A sub-type for a CRW in X, Y and Z, based on distributions for step lengths (`dbn_length`), turning angles (`dbn_heading_delta`) and changes in depth (`dbn_z_delta`);
 
 These contain the following fields: 
 
@@ -24,11 +29,12 @@ These contain the following fields:
 -   `dbn_length`: The distribution of step lengths;
 -   `dbn_heading`: The distribution of headings;
 -   `dbn_heading_delta`: The distribution of turning angles;
+-   `dbn_z`: The distribution of depths;
 -   `dbn_z_delta`: The distribution of changes in depth;
 
 # Custom sub-types
 
-To define a custom sub-type, such as `ModelMoveXYZ`, simply define a `struct` that is a sub-type of `Patter.ModelMove`:
+To define a custom sub-type, such as `ModelMoveXYZ`*, simply define a `struct` that is a sub-type of `Patter.ModelMove`:
 
 ```
 struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
@@ -40,9 +46,11 @@ struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
     # Distribution for headings
     dbn_heading::V
     # Distribution for changes in depth
-    dbn_z_delta::W
+    dbn_z::W
   end
 ```
+
+* Note this structure is now implemented. 
 
 New [`ModelMove`](@ref) structures should obey the following requirements:
 -   The `map` and `mobility` fields are required by all [`ModelMove`](@ref) sub-types; 
@@ -70,11 +78,34 @@ end
 @doc (@doc ModelMove) ModelMoveXY
 
 # Random walk in X, Y and Z
-# * TO DO
-# @doc (@doc ModelMove) ModelMoveXYZ
+struct ModelMoveXYZ{T, U, V, W, X} <: ModelMove
+    # Environment
+    map::T
+    # Step length
+    mobility::U
+    dbn_length::V
+    # Heading
+    dbn_heading::W
+    # Depth
+    dbn_z::X
+end 
+@doc (@doc ModelMove) ModelMoveXYZ
 
-# Correlated random walk in X, Y and random walk in Z
-struct ModelMoveXYZD{T, U, V, W, X} <: ModelMove
+# Correlated random walk in XY
+struct ModelMoveCXY{T, U, V, W} <: ModelMove
+    # Environment
+    map::T
+    # Steplength 
+    mobility::U
+    dbn_length::V
+    # Turning angle 
+    # * This must be symmetrically centred around zero
+    dbn_heading_delta::W
+end 
+@doc (@doc ModelMove) ModelMoveCXY
+
+# Correlated random walk in XYZ
+struct ModelMoveCXYZ{T, U, V, W, X} <: ModelMove
     # Environment
     map::T
     # Step length
@@ -86,7 +117,7 @@ struct ModelMoveXYZD{T, U, V, W, X} <: ModelMove
     # Change in depth 
     dbn_z_delta::X
 end 
-@doc (@doc ModelMove) ModelMoveXYZD
+@doc (@doc ModelMove) ModelMoveCXYZ
 
 
 #########################
@@ -126,7 +157,7 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 """
 function simulate_step end
 
-# RW in X and Y
+# RW in XY
 function simulate_step(state::StateXY, model_move::ModelMoveXY, t::Int64)
     length    = rand(model_move.dbn_length)
     heading   = rand(model_move.dbn_heading)
@@ -136,18 +167,36 @@ function simulate_step(state::StateXY, model_move::ModelMoveXY, t::Int64)
     StateXY(map_value, x, y)
 end 
 
-# RW in X, Y and z
-# * TO DO
+# RW in XYZ
+function simulate_step(state::StateXYZ, model_move::ModelMoveXYZ, t::Int64)
+    length    = rand(model_move.dbn_length)
+    heading   = rand(model_move.dbn_heading)
+    x         = state.x + length * cos(heading)
+    y         = state.y + length * sin(heading)
+    z         = rand(model_move.dbn_z)
+    map_value = extract(model_move.map, x, y)
+    StateXYZ(map_value, x, y, z)
+end 
 
-# CRW in X, Y, Z 
-function simulate_step(state::StateXYZD, model_move::ModelMoveXYZD, t::Int64)
+# CRW in XY
+function simulate_step(state::StateCXY, model_move::ModelMoveCXY, t::Int64)
+    length  = rand(model_move.dbn_length)
+    heading = state.heading + rand(model_move.dbn_heading_delta)
+    x       = state.x + length * cos(heading)
+    y       = state.y + length * sin(heading)
+    map_value = extract(model_move.map, x, y)
+    StateCXY(map_value, x, y, heading)
+end 
+
+# CRW in XYZ 
+function simulate_step(state::StateCXYZ, model_move::ModelMoveCXYZ, t::Int64)
     length  = rand(model_move.dbn_length)
     heading = state.heading + rand(model_move.dbn_heading_delta)
     x       = state.x + length * cos(heading)
     y       = state.y + length * sin(heading)
     z       = state.z + rand(model_move.dbn_z_delta)
     map_value = extract(model_move.map, x, y)
-    StateXYZD(map_value, x, y, z, heading)
+    StateCXYZ(map_value, x, y, z, heading)
 end 
 
 
@@ -247,14 +296,23 @@ function logpdf_step(state_from::StateXY, state_to::StateXY, model_move::ModelMo
     logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading, heading)
 end 
 
-# function logpdf_step(state_from::StateXYZ, ...)
+function logpdf_step(state_from::StateXYZ, state_to::StateXYZ, model_move::ModelMoveXYZ, t::Int64, length::Float64, heading::Float64) 
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading, heading) + logpdf(model_move.dbn_z, state_to.z)
+end 
 
-function logpdf_step(state_from::StateXYZD, state_to::StateXYZD, model_move::ModelMoveXYZD, t::Int64, length::Float64, heading::Float64) 
+function logpdf_step(state_from::StateCXY, state_to::StateCXY, model_move::ModelMoveCXY, t::Int64, length::Float64, heading::Float64) 
+    # Compute turning angle 
+    heading_delta = abs_angle_difference(heading, state_from.heading)
+    # Sum up logpdfs
+    logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading_delta, heading_delta)
+end 
+
+function logpdf_step(state_from::StateCXYZ, state_to::StateCXYZ, model_move::ModelMoveCXYZ, t::Int64, length::Float64, heading::Float64) 
     # Compute change in depth 
     z_delta = state_to.z - state_from.z
     # Compute turning angle 
     heading_delta = abs_angle_difference(heading, state_from.heading)
-    # Sum up logpdfs 
+    # Sum up logpdfs
     logpdf(model_move.dbn_length, length) + logpdf(model_move.dbn_heading_delta, heading_delta) + logpdf(model_move.dbn_z_delta, z_delta)
 end 
 

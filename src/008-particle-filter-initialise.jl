@@ -250,15 +250,30 @@ function states_init(state_type::Type{StateXY}, coords)
     return coords
 end 
 
-function states_init(state_type::Type{StateXYZD}, coords)
+function states_init(state_type::Type{StateXYZ}, coords)
     N = nrow(coords)
-      # Add z coordinate
+    # Add z coordinate
+    @transform! coords :z = :map_value .* rand(N)
+    return coords
+end 
+
+function states_init(state_type::Type{StateCXY}, coords)
+    N = nrow(coords)
+    # Add heading
+    @transform! coords :heading = rand(N) .* 2 .* π
+    return coords
+end 
+
+function states_init(state_type::Type{StateCXYZ}, coords)
+    N = nrow(coords)
+    # Add z coordinate
     @transform! coords :z = :map_value .* rand(N)
     # Add heading
     @transform! coords :heading = rand(N) .* 2 .* π
     return coords
 end 
 
+# Simulate states
 function simulate_states_init(;
     map::Rasters.Raster, 
     timeline::Vector{DateTime},
