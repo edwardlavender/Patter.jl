@@ -8,7 +8,7 @@ using DataFrames
 
     # Patter.julia_get_model_obs_types()
     @test Patter.julia_get_model_obs_types(["ModelObsAcousticLogisTrunc"]) == [ModelObsAcousticLogisTrunc]
-    @test Patter.julia_get_model_obs_types(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"]) == [ModelObsAcousticLogisTrunc, ModelObsDepthUniform]
+    @test Patter.julia_get_model_obs_types(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniformSeabed"]) == [ModelObsAcousticLogisTrunc, ModelObsDepthUniformSeabed]
 
     # Patter.r_get_states()
     # * Define example State matrix ()

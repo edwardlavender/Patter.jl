@@ -52,8 +52,8 @@ If `xinit = nothing`, initial coordinates are sampled from `map`.
 The region(s) within `map` from which initial coordinates are sampled can be optionally restricted by the provision of the observation datasets and the associated model sub-types (via [`Patter.map_init_iter()`](@ref)). This option does not apply to [`simulate_path_walk()`](@ref) but is used in [`particle_filter()`](@ref) where observation models are used. In this instance, [`Patter.map_init_iter()`](@ref) iterates over each model and uses the `Patter.map_init()` method to update `map`. The following methods are implemented:
   - Default. The default method returns `map` unchanged.
   - `model_obs_type::ModelObsAcousticLogisTrunc`. This method uses acoustic observations to restrict `map` via Lavender et al.'s ([2023](https://doi.org/10.1111/2041-210X.14193)) acoustic--container algorithm. The function identifies the receiver(s) that recorded detection(s) immediately before, at and following the first time step (`timeline[start]`, where `start` is `1` if `direction = "forward"` and `length(timeline)` otherwise). The 'container' within which the individual must be located from the perspective of each receiver is defined by the time difference and the individual's mobility (that is, the maximum moveable distance the individual could move between two time steps), which must be specified in `model_move.mobility`. The intersection between all containers defines the possible locations of the individual at the first time step.
-  - `model_obs_type::ModelObsDepthUniform`. This method uses the depth observations to restrict `map` (which should represent the bathymetry in a region). The individual must be within a region in which the observed depth at `timeline[start]` is within a depth envelope around the bathymetric depth defined by the parameters `depth_shallow_eps` and `depth_deep_eps` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
-  - `model_obs_type::ModelObsDepthNormalTrunc`. This method also uses depth observations to restrict `map`. The individual must be in a location where the bathymetric depth plus the `depth_deep_eps` parameter at `timeline[start]` is greater than or equal to the observed depth at `timeline[start]` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
+  - `model_obs_type::ModelObsDepthUniformSeabed`. This method uses the depth observations to restrict `map` (which should represent the bathymetry in a region). The individual must be within a region in which the observed depth at `timeline[start]` is within a depth envelope around the bathymetric depth defined by the parameters `depth_shallow_eps` and `depth_deep_eps` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
+  - `model_obs_type::ModelObsDepthNormalTruncSeabed`. This method also uses depth observations to restrict `map`. The individual must be in a location where the bathymetric depth plus the `depth_deep_eps` parameter at `timeline[start]` is greater than or equal to the observed depth at `timeline[start]` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
 
 To handle custom [`ModelObs`](@ref) sub-types, process `map` beforehand or write an appropriate `Patter.map_init()` method.
 
@@ -146,12 +146,12 @@ function map_init(map::Rasters.Raster,
 
 end 
 
-# For ModelObsDepthUniform, we restrict map using the depth observation
+# For ModelObsDepthUniformSeabed, we restrict map using the depth observation
 function map_init(map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
     model_move::ModelMove, 
     dataset::DataFrame,
-    model_obs_type::Type{ModelObsDepthUniform}, 
+    model_obs_type::Type{ModelObsDepthUniformSeabed}, 
     direction::String = "forward")
 
     # Check dataset
@@ -177,12 +177,12 @@ function map_init(map::Rasters.Raster,
 
 end 
 
-# For ModelObsDepthNormalTrunc, we restrict map using the depth observation
+# For ModelObsDepthNormalTruncSeabed, we restrict map using the depth observation
 function map_init(map::Rasters.Raster, 
     timeline::Vector{DateTime}, 
     model_move::ModelMove, 
     dataset::DataFrame,
-    model_obs_type::Type{ModelObsDepthNormalTrunc}, 
+    model_obs_type::Type{ModelObsDepthNormalTruncSeabed}, 
     direction::String = "forward")
     # Check dataset
     check_names(dataset, ["timestamp", "obs", "depth_sigma", "depth_deep_eps"])

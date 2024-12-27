@@ -382,7 +382,7 @@ datasets_bwd        = [acoustics, containers_bwd, archival]
 #>                                                             705 rows omitted
 model_obs_types     = [ModelObsAcousticLogisTrunc, 
                        ModelObsAcousticContainer, 
-                       ModelObsDepthNormalTrunc];
+                       ModelObsDepthNormalTruncSeabed];
 yobs_fwd            = assemble_yobs(datasets = datasets_fwd,
                                     model_obs_types = model_obs_types);
 yobs_bwd            = assemble_yobs(datasets = datasets_bwd,

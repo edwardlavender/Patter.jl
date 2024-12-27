@@ -3,7 +3,7 @@ using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticContainer
-export ModelObsDepthUniform, ModelObsDepthNormalTrunc
+export ModelObsDepthUniformSeabed, ModelObsDepthNormalTruncSeabed
 
 
 """
@@ -57,15 +57,15 @@ via `Patter.simulate_obs()`.
 
 Acoustic containers are a computational device used to facilitate convergence in the particle filter. At each time step, particles are permitted or killed depending on whether or not the distance between a particle and the receiver(s) that recorded the next detection(s) is ≤ `radius`.
 
-## `ModelObsDepthUniform`
+## `ModelObsDepthUniformSeabed`
 
-`ModelObsDepthUniform` is `ModelObs` structure for a depth observation and a uniform depth model. This contains the following fields:
+`ModelObsDepthUniformSeabed` is `ModelObs` structure for a depth observation and a uniform depth model. This contains the following fields:
 
 - `sensor_id`: An integer that defines the sensor (tag) ID;
 - `depth_shallow_eps`: A float that defines the shallow depth error;
 - `depth_deep_eps`: A float that defines the deep depth error;
 
-This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by two error terms (`depth_shallow_eps` and `depth_deep_eps`), according to the equation:
+This model assumes that an individual must be located in an envelope around the seabed, defined by two error terms (`depth_shallow_eps` and `depth_deep_eps`), according to the equation:
 
 ```math
 f\\left( y_t^{(D)} |  \\textit{\\textbf{s}}_t \\right) =
@@ -85,15 +85,15 @@ y_t^{(D)} |  \\textit{\\textbf{s}}_t \\sim \\text{Uniform}(b(\\textit{\\textbf{s
 
 via `Patter.simulate_obs()`. If `depth_shallow_eps` and `depth_deep_eps` are set to zero, the `Patter.simulate_obs()` method simply returns the bathymetric depth (`state.map_value`).
 
-## `ModelObsDepthNormalTrunc`
+## `ModelObsDepthNormalTruncSeabed`
 
-`ModelObsDepthNormalTrunc` is a `ModelObs` structure for a depth observation and a truncated normal model. This contains the following fields:
+`ModelObsDepthNormalTruncSeabed` is a `ModelObs` structure for a depth observation and a truncated normal model. This contains the following fields:
 
 - `sensor_id`: An integer that defines the sensor (tag) ID;
 - `depth_sigma`: A float that defines the standard deviation of the normal distribution;
 - `depth_deep_eps`: A float that defines the deep truncation parameter;
 
-This model assumes that an individual must be located in an envelope around the bathymetric depth, defined by a normal distribution centred at this location with standard deviation `depth_sigma`: 
+This model assumes that an individual must be located in an envelope around the seabed, defined by a normal distribution centred at this location with standard deviation `depth_sigma`: 
 
 ```math
 f(y_t^{(D)} | \\textit{\\textbf{s}}_t) = \\text{TruncatedNormal}(b(\\textit{\\textbf{s}}_t), \\text{depth\\_sigma}^2, 0, b(\\textit{\\textbf{s}}_t)).
@@ -256,13 +256,13 @@ end
 #########################
 #### Uniform depth model 
 
-struct ModelObsDepthUniform <: ModelObs
+struct ModelObsDepthUniformSeabed <: ModelObs
     sensor_id::Int64
     depth_shallow_eps::Float64
     depth_deep_eps::Float64
 end
 
-function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
+function simulate_obs(state::State, model_obs::ModelObsDepthUniformSeabed, t::Int64)
     if model_obs.depth_shallow_eps == model_obs.depth_deep_eps == 0.0
         return state.map_value
     end 
@@ -272,7 +272,7 @@ function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
     rand(dbn)
 end 
 
-function logpdf_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64, obs::Float64)
+function logpdf_obs(state::State, model_obs::ModelObsDepthUniformSeabed, t::Int64, obs::Float64)
     if model_obs.depth_shallow_eps == model_obs.depth_deep_eps == 0.0
         if abs(state.map_value - obs) < 1.0e-7
             return 0.0
@@ -291,7 +291,7 @@ end
 #########################
 #### Truncated normal depth model
 
-struct ModelObsDepthNormalTrunc <: ModelObs 
+struct ModelObsDepthNormalTruncSeabed <: ModelObs 
     sensor_id::Int64
     # Normal distribution variance
     depth_sigma::Float64
@@ -303,13 +303,13 @@ end
 # * The probability is highest if the individual is on the seabed
 # * The individual can be up to model_obs.depth_deep_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
-function simulate_obs(state::State, model_obs::ModelObsDepthNormalTrunc, t::Int64)
+function simulate_obs(state::State, model_obs::ModelObsDepthNormalTruncSeabed, t::Int64)
     dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma), 
                       0.0, state.map_value + model_obs.depth_deep_eps)
     rand(dbn)
 end 
 
-function logpdf_obs(state::State, model_obs::ModelObsDepthNormalTrunc, t::Int64, obs::Float64)
+function logpdf_obs(state::State, model_obs::ModelObsDepthNormalTruncSeabed, t::Int64, obs::Float64)
     dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma), 
                       0.0, state.map_value + model_obs.depth_deep_eps)
     logpdf(dbn, obs)

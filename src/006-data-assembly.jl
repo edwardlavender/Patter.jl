@@ -76,7 +76,7 @@ function assemble_yobs(; datasets::Vector, model_obs_types::Vector{DataType})
     # * Review the speed of this function
 
     # Initialise empty dictionary 
-    # yobs = Dict{DateTime, Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}}()
+    # yobs = Dict{DateTime, Vector{Union{Tuple{Float64, ModelObsDepthUniformSeabed}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}}()
     # A) Initialise Dict() with generic ModelObs type
     # * This is MUCH slower for <= ModelObs types (e.g., 7 min -> 45 min)
     # * But about twice as fast for >4 4 ModelObs types (e.g., 2.5 hr -> 1 hour)
@@ -100,7 +100,7 @@ function assemble_yobs(; datasets::Vector, model_obs_types::Vector{DataType})
         # Iterate over time steps & add observations & ModelObs objects
         for (timestamp, obs, row) in zip(dataset.timestamp, dataset.obs, Tables.namedtupleiterator(parameters))
             if !haskey(yobs, timestamp)
-                # yobs[timestamp] = Vector{Union{Tuple{Float64, ModelObsDepthUniform}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}() 
+                # yobs[timestamp] = Vector{Union{Tuple{Float64, ModelObsDepthUniformSeabed}, Tuple{Int64, ModelObsAcousticLogisTrunc}}}() 
                 yobs[timestamp] = entry
             end  
             # Update dictionary 
