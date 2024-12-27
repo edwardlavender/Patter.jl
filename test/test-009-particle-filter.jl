@@ -1,4 +1,4 @@
-@testset "resample" begin
+@testset "Patter.resample()" begin
 
     w = [20.0, 10 ,80]
     ii = Patter.resample(w, Int(sum(w)))

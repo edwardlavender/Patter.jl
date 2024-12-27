@@ -21,17 +21,11 @@ function julia_get_xinit(state::Type{<:State}, d::DataFrame)
     [state((d[i, Symbol(field)] for field in fields)...) for i in 1:nrow(d)]
 end 
 
-# d = DataFrame(map_value = [0, 1], x = [1, 2], y = [3, 4])
-# julia_get_xinit(StateXY, d)
-
 # Get a vector of ModelObs types 
 function julia_get_model_obs_types(models::Union{String, Vector{String}})
     models = isa(models, String) ? [models] : models
     return [getfield(Main, Symbol(model)) for model in models]
 end
-
-# julia_get_model_obs_types(["ModelObsAcousticLogisTrunc"])
-# julia_get_model_obs_types(["ModelObsAcousticLogisTrunc", "ModelObsDepthUniform"])
 
 # Get a vector of ModelObs instances
 function julia_get_model_obs(parameters::Vector, model_types::Vector{DataType})

@@ -35,10 +35,6 @@ function check_names(input::DataFrame, req)
     return nothing
 end
 
-# check_names(DataFrame(x = 1, y = 2), "x")
-# check_names(DataFrame(x = 1, y = 2), "z")
-# check_names(DataFrame(x = 1, y = 2), ["a", "b"])
-
 
 #########################
 #########################
@@ -50,18 +46,6 @@ function diffsecs(t2::Union{Dates.DateTime, Vector{Dates.DateTime}},
                   t1::Union{Dates.DateTime, Vector{Dates.DateTime}}) 
     Dates.value.(t2 .- t1) ./ 1000
 end 
-
-# t1 = DateTime("2024-09-01T12:00:00")
-# t2 = DateTime("2024-09-01T12:05:00")
-# diffsecs(t2, t1)
-# t1 = DateTime("2024-09-01T12:00:00")
-# t2 = DateTime("2024-09-01T11:55:00")
-# diffsecs(t2, t1)
-# t1 = DateTime("2024-09-01T12:00:00")
-# t2 = DataFrame(
-#     timeline = [DateTime("2024-09-01T12:10:00"), DateTime("2024-09-01T12:15:00")]
-# )
-# diffsecs(t2.timeline, t1)
 
 # Time differences: function call duration (s)
 function call_duration(call_start::Dates.DateTime)
