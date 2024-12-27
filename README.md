@@ -169,7 +169,7 @@ movements:
 # Read a UTM bathymetry rasters that defines the 'environment' within which movements occurred
 # * `env_init` is a Raster that is used for sampling initial states (locations)
 # * `env` is a GeoArray that is used by the algorithms (faster)
-env_init = Patter.rast(x = joinpath("data", "bathymetry.tif"));
+env_init = Patter.rast(joinpath("data", "bathymetry.tif"));
 env = GeoArrays.read(joinpath("data", "bathymetry.tif"));
 
 # Define a timeline for the analysis
@@ -455,7 +455,7 @@ simulation, the simulated `State`s and other algorithm diagnostics.
 
 ``` julia
 summary(fwd)
-#> "@NamedTuple{timesteps::Vector{Int64}, timestamps::Vector{DateTime}, state::Matrix{StateXY}, direction::String, ess::Vector{Float64}, maxlp::Vector{Float64}, convergence::Bool, trials::Int64}"
+#> "Patter.Particles"
 ```
 
 ## Particle smoother
@@ -469,8 +469,8 @@ and after each step):
 # (optional) Set vmap to improve speed here
 n_particle = 750;
 smo = two_filter_smoother(timeline = timeline,
-                          xfwd = fwd.state[1:n_particle, :],
-                          xbwd = bwd.state[1:n_particle, :],
+                          xfwd = fwd.states[1:n_particle, :],
+                          xbwd = bwd.states[1:n_particle, :],
                           model_move = model_move,
                           n_sim = 100);
 ```
