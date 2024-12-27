@@ -73,29 +73,34 @@ end
 
 
 #### Get a DataFrame of States
-function r_get_states(state::Matrix, timesteps::Vector = collect(1:size(state, 2)))
+function r_get_states(states::Matrix{<:State}, 
+                      timesteps::Vector{Int},
+                      timestamps::Vector{Dates.DateTime})
     # Initialise empty matrix
-    fields = fieldnames(typeof(state[1]))
-    values = Matrix{Float64}(undef, prod(size(state)), length(fields) + 2)
+    if (length(timesteps) != length(timestamps))
+        error("`length(timesteps)` and `length(timestamps)` should be identical.")
+    end 
+    fields = fieldnames(typeof(states[1]))
+    values = Matrix{Float64}(undef, prod(size(states)), length(fields) + 2)
     # Define path ID & time step columns
-    np = size(state, 1)
-    nt = size(state, 2)
+    np = size(states, 1)
+    nt = size(states, 2)
     values[:, 1] = repeat(1:np, inner = nt)
     values[:, 2] = repeat(1:nt, outer = np)
     # Populate matrix
     for i in 1:size(values, 1)
         for j in eachindex(fields)
-            values[i, j + 2] = getfield(state[Int(values[i, 1]), Int(values[i, 2])], fields[j])
+            values[i, j + 2] = getfield(states[Int(values[i, 1]), Int(values[i, 2])], fields[j])
         end 
     end 
     # Replace column indices with timesteps 
     values[:, 2] = repeat(minimum(timesteps):maximum(timesteps), outer = np)
     # Coerce to dataframe
-    fields = (:path_id, :timestep, fields...)
-    df = DataFrame(values, collect(fields))
+    df = DataFrame(values, collect((:path_id, :timestep, fields...)))
     df.path_id = Int.(df.path_id)
     df.timestep = Int.(df.timestep)
-    df
+    df.timestamp = timestamps[indexin(df.timestep, timesteps)]
+    select!(df, collect((:path_id, :timestep, :timestamp, fields...)))
 end
 @doc (@doc r_get) r_get_states
 
@@ -114,19 +119,13 @@ end
 
 
 #### Get a Tuple of particle information (states, diagnostics, convergence)
-function r_get_particles(particles::NamedTuple)
-    # Collate information 
-    states      = r_get_states(particles.state, particles.timesteps)
-    diagnostics = DataFrame(timestep = particles.timesteps, 
-                            timestamp = particles.timestamps, 
-                            ess = particles.ess, 
-                            maxlp = particles.maxlp)
-    # Return outputs 
+function r_get_particles(particles::Particles)
     (
-        states      = states, 
-        diagnostics = diagnostics, 
-        convergence = particles.convergence, 
-        trials      = particles.trials
+        states      = r_get_states(particles.states, 
+                                   particles.diagnostics.timestep, 
+                                   particles.diagnostics.timestamp), 
+        diagnostics = particles.diagnostics, 
+        callstats   = particles.callstats
     )
 end 
 @doc (@doc r_get) r_get_particles

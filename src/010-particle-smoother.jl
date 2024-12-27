@@ -29,15 +29,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 
 # Returns 
 
-- A `NamedTuple`, of the same format as returned by [`particle_filter()`](@ref), with the following fields:
-    - `timesteps`
-    - `timestamps`
-    - `direction`: `nothing`
-    - `state`
-    - `ess`
-    - `maxlp`: `NaN`
-    - `convergence`: `true`
-    - `trial`: NaN
+- A [`Particles`](@ref) structure;
 
 # See also
 
@@ -57,6 +49,7 @@ function two_filter_smoother(;timeline::Vector{DateTime},
                              cache::Bool = true)
 
     #### Check inputs
+    call_start = now()
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
 
     #### Set up
@@ -140,15 +133,8 @@ function two_filter_smoother(;timeline::Vector{DateTime},
 
     #### Return outputs
     # Follow particle_filter() format
-    (
-        timesteps   = collect(1:nt), 
-        timestamps  = timeline, 
-        state       = xout, 
-        direction   = nothing, 
-        ess         = ess, 
-        maxlp       = NaN, 
-        convergence = true, 
-        trials      = NaN
-    )
+    particulate("smoother: two-filter", call_start, 
+                timeline, xout, ess, fill(NaN, length(timeline)), 
+                np, NaN, true)
 
 end

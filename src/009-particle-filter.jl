@@ -82,6 +82,66 @@ function resample(w::Vector{Float64}, n::Int = length(w))
     idx
 end
 
+"""
+    Particles(states::Matrix, diagnostics::DataFrame, callstats::DataFrame)
+
+# Fields
+
+- `states`: A `Matrix` of [`State`](@ref)s:
+    - Each row corresponds to a particle;
+    - Each column corresponds to the `timestep`;
+- `diagnostics`: A `DataFrame` of algorithm diagnostics:
+    -   timestep: A `Vector{Int64}` of time steps;
+    -   timestamp: A `Vector{DateTime}` of time stamps;
+    -   ess: A `Vector{Float64}` that defines the effective sample size at each time step;
+    -   maxlp:  `Vector{Float64}` that defines the maximum log weight at each time step (i.e., the maximum log-posterior, if resampling is implemented at every time step);
+- `callstats`: A one-row `DataFrame` of call statistics:
+    -   timestamp: A `DateTime` that define the start time of the function call;
+    -   routine: A `String` that defines the algorithm;
+    -   n_particle: An `Int` that defines the number of particles;
+    -   n_iter: An `Int` or `NaN` that defines the number of iterations (trials);
+    -   convergence: A `Boolian` that defines whether or not the algorithm reached the end of the `timeline`;
+    -   time: A `Float64` that defines the duration (s) of the function call;
+
+# See also
+
+`Particles` objects are returned by:
+    - [`particle_filter()`](@ref) 
+    - [`two_filter_smoother()`](@ref)
+
+"""
+struct Particles
+    states::Matrix{<:State}
+    diagnostics::DataFrame
+    callstats::DataFrame
+end
+
+# Create 'particles' structure in particle_filter() or two_filter_smoother()
+function particulate(routine::String, 
+                     timestamp::Dates.DateTime, 
+                     timeline::Vector{Dates.DateTime},
+                     states::Matrix{<:State},
+                     ess::Vector{Float64}, 
+                     maxlp::Vector{Float64}, 
+                     n_particle::Int, 
+                     n_iter::Union{Int, Float64}, # NaN in two_filter_smoother()
+                     convergence::Bool)
+
+    diagnostics = DataFrame(timestep  = collect(1:length(timeline)), 
+                            timestamp = timeline, 
+                            ess       = ess, 
+                            maxlp     = maxlp)
+
+    callstats = DataFrame(timestamp   = timestamp, 
+                          routine     = routine,
+                          n_particle  = n_particle,
+                          n_iter      = n_iter,
+                          convergence = convergence,
+                          time        = call_duration(timestamp))
+                          
+    return Particles(states, diagnostics, callstats)
+
+end 
 
 """
 # Particle filter
@@ -143,17 +203,7 @@ Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a 
 
 # Returns
 
-- A `NamedTuple` with the following fields:
-    - `timesteps`: An `Vector{Int64}` of time steps;
-    - `timestamps`: The `timeline`;
-    - `direction`: The `direction`;
-    - `state`: A `Matrix` of [`State`](@ref)s:
-        - Each row corresponds to a particle;
-        - Each column corresponds to the `timestep`;
-    - `ess`: A `Vector{Float64}` that defines the effective sample size at each time step;
-    - `maxlp`: A `Vector{Float64}` that defines the maximum log weight at each time step (i.e., the maximum log-posterior, if resampling is implemented at every time step);
-    - `convergence`: A `Boolian` that defines whether or not the algorithm reached the end of the `timeline`;
-    - `trials`: An integer that defines the number of trials (1);
+- A [`Particles`](@ref) structure;
 
 # See also
 
@@ -176,6 +226,8 @@ function particle_filter(
     direction::String = "forward")
 
     #### Define essential parameters
+    # Call start
+    call_start = now()
     # Number of time steps
     nt = length(timeline)
     # Number of particles
@@ -208,8 +260,8 @@ function particle_filter(
     #### Define particle objects
     # Particles
     xpast = deepcopy(xinit)
-    xnow = deepcopy(xinit)
-    xout = Matrix{eltype(xinit)}(undef, nr, nt);
+    xnow  = deepcopy(xinit)
+    xout  = Matrix{eltype(xinit)}(undef, nr, nt);
     # (log) weights
     lw = zeros(np)
     # Output particles
@@ -256,13 +308,9 @@ function particle_filter(
             pos  = sort([start, stop])
             pos  = pos[1]:pos[2]
             julia_warning("Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf.")
-            return (timesteps    = collect(pos),
-                    timestamps   = timeline[pos],
-                    state        = xout[:, pos],
-                    direction    = direction,
-                    ess          = ess[pos],
-                    maxlp        = maxlp[pos],
-                    convergence  = false)
+            return particulate("filter: " * direction, call_start, 
+                               timeline[pos], xout[:, pos], ess[pos], maxlp[pos], 
+                               np, 1, false)
          end
 
         #### Resample particles
@@ -286,16 +334,9 @@ function particle_filter(
 
     end
 
-    (
-        timesteps   = collect(1:nt),
-        timestamps  = timeline,
-        state       = xout,
-        direction   = direction,
-        ess         = ess,
-        maxlp       = maxlp,
-        convergence = true, 
-        trials      = 1
-    )
+    return particulate("filter: " * direction, call_start, 
+                       timeline, xout, ess, maxlp, 
+                       np, 1, true)
 
 end
 
@@ -316,7 +357,7 @@ This function wraps [`particle_filter`](@ref). The filter is implemented up to `
 
 # Returns 
 
-- A `NamedTuple`, of the same format as returned by [`particle_filter()`](@ref).
+- A [`Particles`](@ref) structure;
 
 # See also
 
@@ -335,26 +376,31 @@ function particle_filter_iter(
     n_iter::Int64 = 1,
     direction::String = "forward")
 
-    trial = 1
-    trials = 1
-    while trial <= n_iter
-        trials = trial
-        out = particle_filter(timeline = timeline,
-                              xinit = xinit,
-                              yobs = yobs,
-                              model_move = model_move,
-                              n_move = n_move,
-                              n_record = n_record,
-                              n_resample = n_resample,
-                              t_resample = t_resample,
-                              direction  = direction)
-        if out.convergence
-            trial = Inf
-        else
-            trial = trial + 1
-        end
+    # Run filter iteratively 
+    call_start = now()
+    iter       = 0
+    n_iter     = max(1, n_iter)
+    out        = nothing
+    while iter < n_iter
+        iter = iter + 1
+        out  = particle_filter(timeline   = timeline,
+                               xinit      = xinit,
+                               yobs       = yobs,
+                               model_move = model_move,
+                               n_move     = n_move,
+                               n_record   = n_record,
+                               n_resample = n_resample,
+                               t_resample = t_resample,
+                               direction  = direction)
+        if out.callstats.convergence[1]
+            break
+        end 
     end
-    out = merge(out, (trials = trials, ))
+    
+    # Define outputs
+    out.callstats.timestamp .= call_start
+    out.callstats.n_iter    .= iter
+    out.callstats.time      .= call_duration(call_start)
     return out
 
 end

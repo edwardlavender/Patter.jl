@@ -31,7 +31,8 @@ end
 
 # Compute the difference in time between t2 and t1 in seconds
 # * `t2` and `t1` may be DateTime or Vector{DateTime}
-function diffsecs(t2, t1) 
+function diffsecs(t2::Union{Dates.DateTime, Vector{Dates.DateTime}}, 
+                  t1::Union{Dates.DateTime, Vector{Dates.DateTime}}) 
     Dates.value.(t2 .- t1) ./ 1000
 end 
 
@@ -46,3 +47,8 @@ end
 #     timeline = [DateTime("2024-09-01T12:10:00"), DateTime("2024-09-01T12:15:00")]
 # )
 # diffsecs(t2.timeline, t1)
+
+# Calculate the duration of a function call (s)
+function call_duration(call_start::Dates.DateTime)
+    return diffsecs(now(), call_start)
+end 
