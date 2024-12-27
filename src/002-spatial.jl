@@ -1,8 +1,6 @@
 using DataFrames, DataFramesMeta
 using DimensionalData, GeoArrays, Rasters, LibGEOS
 
-export extract
-
 
 #########################
 #########################
@@ -67,7 +65,7 @@ function spatCentre(; x::Rasters.Raster)
 end 
 
 # Read a single-layer raster for Patter.jl
-function rast(; x::String)
+function rast(x::String)
     # Read Raster
     x = Rasters.Raster(x, replace_missing = true)
     # Centre coordinates to avoid floating point issues
@@ -82,7 +80,7 @@ end
 """
     extract(map::GeoArrays.GeoArray, x::Real, y::Real)
 
-Extract the value of a `GeoArray` (such as a bathymetry grid) at a pair of `x` and `y` coordinates.
+(Internal) Extract the value of a `GeoArray` (such as a bathymetry grid) at a pair of `x` and `y` coordinates.
 
 # Details
 
@@ -96,9 +94,9 @@ In `Patter.jl`, `map` is a `GeoArray` that defines the area within which movemen
 # See also
 
 * [`State`](@ref) for [`State`](@ref) sub-types;
-* [`extract`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
+* [`Patter.extract()`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
 * [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
+* [`Patter.is_valid()`](@ref) to determine whether or not a simulated state is valid;
 * [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
@@ -119,7 +117,7 @@ end
     is_valid(map_value::Real)
     is_valid(map_value::Real, z::Real)
 
-Determine the validity of a point on a `map`.
+(Internal) Determine the validity of a point on a `map`.
 
 For two-dimensional (x, y) states, `is_valid(map_value)` checks if the `map_value` (at a point (`x`, `y`)) is not `NaN`.
 
@@ -140,9 +138,9 @@ These are internal functions. They are used to validate simulated individual sta
 # See also
 
 * [`State`](@ref) for [`State`](@ref) sub-types;
-* [`extract`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
+* [`Patter.extract()`](@ref) to extract values from `map` at [`State`](@ref) coordinates;
 * [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
+* [`Patter.is_valid()`](@ref) to determine whether or not a simulated state is valid;
 * [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
@@ -164,43 +162,21 @@ end
 #########################
 #### Ancillary internal functions
 
-# """
-#     distance(x0::Real, y0::Real, x1::Real, y1::Real)
-
-# Calculate Euclidean distances between coordinates. 
-
-# # Arguments
-# - `x0`, `y0`: The coordinates of the first point;
-# - `x1`, `y1`: The coordinates of the second point;
-
-# # Returns
-# - A number that defines the distance between two coordinates.
-# """
-function distance end
-
-# 2D case
+# Distance: 2D  
 function distance(x0::Real, y0::Real, x1::Real, y1::Real)
     # sqrt((x0 - x1)^2 + (y0 - y1)^2)
     hypot(x0 - x1, y0 - y1)
 end
 
 
-# """
-#     cartesian_to_polar(x, y)
-
 # Convert cartesian to polar coordinates. 
-# """
 function cartesian_to_polar(x, y)
     # (length = sqrt(x^2 + y^2), angle = atan(y, x))
     (length = hypot(x, y), angle = atan(y, x))
 end 
 
 
-# """
-#     abs_angle_difference(a1, a2)
-
 # Compute the smallest absolute rotation between two angles.
-# """
 function abs_angle_difference(a1, a2)
     angle_delta = mod(abs(a1 - a2), 2π)
     min(angle_delta, 2π - angle_delta)

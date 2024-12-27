@@ -21,9 +21,9 @@ Simulate a DataFrame or Vector of initial [`State`](@ref)s for the simulation of
 # Arguments
 
 - `map`: A `Rasters.Raster` that defines the study area for the simulation. Here, `map` is used to:
-  - Sample initial coordinates, via [`Patter.coords_init()`](@ref), if `xinit = nothing`;
+  - Sample initial coordinates, via `Patter.coords_init()`, if `xinit = nothing`;
 
-- `timeline`, `model_move`, `datasets`, `model_obs_types`, `direction`: Additional arguments used to restrict `map`, via [`Patter.map_init()`](@ref), before sampling initial states.
+- `timeline`, `model_move`, `datasets`, `model_obs_types`, `direction`: Additional arguments used to restrict `map`, via `Patter.map_init()`, before sampling initial states.
   - `timeline`: A sorted, `DateTime` vector of regularly spaced time stamps that defines the timeline for the simulation;
   - `model_move`: A [`ModelMove`](@ref) instance;
   - (optional) `datasets`: A `Vector` of observation datasets or `nothing`;
@@ -31,12 +31,12 @@ Simulate a DataFrame or Vector of initial [`State`](@ref)s for the simulation of
   - `direction`: A `String` string that defines the direction of the simulation (`"forward"` or `"backward"`);
 
 - `state_type`: The [`State`](@ref) sub-type. Here, `state` is used to:
-  - Convert sampled coordinates to initial states, via [`Patter.states_init()`](@ref), if `xinit = nothing`;
+  - Convert sampled coordinates to initial states, via `Patter.states_init()`, if `xinit = nothing`;
 
 - `xinit`: (optional) A `DataFrame` of initial states, with one column for each state dimension.
 
 - `n_particle`: An `integer` that defines the number of simulated states:
-  - If `xinit = nothing`, `n_particle` specifies the number of simulated states via [`Patter.coords_init()`](@ref);
+  - If `xinit = nothing`, `n_particle` specifies the number of simulated states via `Patter.coords_init()`;
   - If `xinit` is supplied but there are not `n_particle` initial states, `n_particle` initial states are re-sampled from `xinit` with replacement;
 
 - `output`: A `String` that defines the output format:
@@ -49,15 +49,15 @@ These functions support the simulation of initial states for animal movement wal
 
 If `xinit = nothing`, initial coordinates are sampled from `map`.
 
-The region(s) within `map` from which initial coordinates are sampled can be optionally restricted by the provision of the observation datasets and the associated model sub-types (via [`Patter.map_init_iter()`](@ref)). This option does not apply to [`simulate_path_walk()`](@ref) but is used in [`particle_filter()`](@ref) where observation models are used. In this instance, [`Patter.map_init_iter()`](@ref) iterates over each model and uses the [`Patter.map_init()`](@ref) method to update `map`. The following methods are implemented:
+The region(s) within `map` from which initial coordinates are sampled can be optionally restricted by the provision of the observation datasets and the associated model sub-types (via `Patter.map_init_iter`). This option does not apply to [`simulate_path_walk()`](@ref) but is used in [`particle_filter()`](@ref) where observation models are used. In this instance, `Patter.map_init_iter` iterates over each model and uses the `Patter.map_init()` method to update `map`. The following methods are implemented:
   - Default. The default method returns `map` unchanged.
   - `model_obs_type::ModelObsAcousticLogisTrunc`. This method uses acoustic observations to restrict `map` via Lavender et al.'s ([2023](https://doi.org/10.1111/2041-210X.14193)) acoustic--container algorithm. The function identifies the receiver(s) that recorded detection(s) immediately before, at and following the first time step (`timeline[start]`, where `start` is `1` if `direction = "forward"` and `length(timeline)` otherwise). The 'container' within which the individual must be located from the perspective of each receiver is defined by the time difference and the individual's mobility (that is, the maximum moveable distance the individual could move between two time steps), which must be specified in `model_move.mobility`. The intersection between all containers defines the possible locations of the individual at the first time step.
   - `model_obs_type::ModelObsDepthUniform`. This method uses the depth observations to restrict `map` (which should represent the bathymetry in a region). The individual must be within a region in which the observed depth at `timeline[start]` is within a depth envelope around the bathymetric depth defined by the parameters `depth_shallow_eps` and `depth_deep_eps` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
   - `model_obs_type::ModelObsDepthNormalTrunc`. This method also uses depth observations to restrict `map`. The individual must be in a location where the bathymetric depth plus the `depth_deep_eps` parameter at `timeline[start]` is greater than or equal to the observed depth at `timeline[start]` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
 
-To handle custom [`ModelObs`](@ref) sub-types, process `map` beforehand or write an appropriate [`Patter.map_init()`](@ref) method.
+To handle custom [`ModelObs`](@ref) sub-types, process `map` beforehand or write an appropriate `Patter.map_init()` method.
 
-Using `map`, a `DataFrame` of `n_particle` initial coordinates (`map_value`, `x`, `y`) is sampled using [`Patter.coords_init()`](@ref). Additional state dimensions are added, as required depending on the `state_type`, via a [`Patter.states_init()`](@ref) method. For custom [`State`](@ref) sub-types, a corresponding [`Patter.states_init()`](@ref) method is required (or supply `xinit` yourself).
+Using `map`, a `DataFrame` of `n_particle` initial coordinates (`map_value`, `x`, `y`) is sampled using `Patter.coords_init()`. Additional state dimensions are added, as required depending on the `state_type`, via a `Patter.states_init()` method. For custom [`State`](@ref) sub-types, a corresponding `Patter.states_init()` method is required (or supply `xinit` yourself).
 
 If `xinit()` is provided and `n_particle` initial states are provided, `xinit` is returned unchanged. Otherwise, `n_particle` initial states are resampled from `xinit`, with replacement, and returned.
 
@@ -80,24 +80,22 @@ These functions are used to initialise simulated movement trajectories in [`simu
 function simulate_states_init end 
 
 # The default method (for unknown models) returns `map`
-function map_init(
-    map::Rasters.Raster, 
-    timeline::Vector{DateTime}, 
-    model_move::ModelMove, 
-    dataset,                        # ::DataFrame,
-    model_obs_type,                 # ::Type{<: ModelObs}, 
-    direction::String = "forward")
-return map
+function map_init(map::Rasters.Raster, 
+                  timeline::Vector{DateTime}, 
+                  model_move::ModelMove, 
+                  dataset,                        # ::DataFrame,
+                  model_obs_type,                 # ::Type{<: ModelObs}, 
+                  direction::String = "forward")
+    return map
 end
-@doc (@doc simulate_states_init) map_init
 
 # For ModelObsAcousticLogisTrunc, we use the AC algorithm
 function map_init(map::Rasters.Raster, 
-    timeline::Vector{DateTime}, 
-    model_move::ModelMove, 
-    dataset::DataFrame,
-    model_obs_type::Type{ModelObsAcousticLogisTrunc}, 
-    direction::String = "forward")
+                  timeline::Vector{DateTime}, 
+                  model_move::ModelMove, 
+                  dataset::DataFrame,
+                  model_obs_type::Type{ModelObsAcousticLogisTrunc}, 
+                  direction::String = "forward")
 
     #### Check user inputs
     dataset = deepcopy(dataset)
@@ -227,7 +225,6 @@ function map_init_iter(
     return map
 
 end 
-@doc (@doc simulate_states_init) map_init_iter
 
 # Sample .n initial coordinates (map_value, x, y) from a SpatRaster
 function coords_init(map, size) 
@@ -238,13 +235,11 @@ function coords_init(map, size)
     end 
     return xinit
 end
-@doc (@doc simulate_states_init) coords_init
 
 # Convert a `DataFrame` of coordinates (map_value, x, y) to a DataFrame with all state dimensions
 function states_init(state_type::Type{<: State}, coords)
  error("For custom states, you need to define a `Patter.states_init()` method or provide `.xinit`.")
 end 
-@doc (@doc simulate_states_init) states_init
 
 function states_init(state_type::Type{StateXY}, coords)
     return coords

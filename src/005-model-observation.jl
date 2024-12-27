@@ -3,7 +3,6 @@ using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
 export ModelObsAcousticLogisTrunc, ModelObsAcousticContainer
-# export ModelObsCaptureContainer
 export ModelObsDepthUniform, ModelObsDepthNormalTrunc
 
 
@@ -47,7 +46,7 @@ To simulate an acoustic observation (``y^{(A)}_{t, k} \\in {0, 1}``) from this m
 ```math
 y^{(A)}_{t, k} | \\textit{\\textbf{s}}_t \\sim \\text{Bernoulli}(p_{k,t}(\\textit{\\textbf{s}}_t))
 ```
-via [`Patter.simulate_obs()`](@ref).
+via `Patter.simulate_obs()`.
 
 ## `ModelObsAcousticContainer`
 
@@ -84,7 +83,7 @@ We can simulate observations from this model as follows:
 y_t^{(D)} |  \\textit{\\textbf{s}}_t \\sim \\text{Uniform}(b(\\textit{\\textbf{s}}_t) + \\text{depth\\_deep\\_eps}, \\text{min}(b(\\textit{\\textbf{s}}_t) - \\text{depth\\_shallow\\_eps}, 0))
 ```
 
-via [`Patter.simulate_obs()`](@ref). If `depth_shallow_eps` and `depth_deep_eps` are set to zero, the [`Patter.simulate_obs()`](@ref) method simply returns the bathymetric depth (`state.map_value`).
+via `Patter.simulate_obs()`. If `depth_shallow_eps` and `depth_deep_eps` are set to zero, the `Patter.simulate_obs()` method simply returns the bathymetric depth (`state.map_value`).
 
 ## `ModelObsDepthNormalTrunc`
 
@@ -100,7 +99,7 @@ This model assumes that an individual must be located in an envelope around the 
 f(y_t^{(D)} | \\textit{\\textbf{s}}_t) = \\text{TruncatedNormal}(b(\\textit{\\textbf{s}}_t), \\text{depth\\_sigma}^2, 0, b(\\textit{\\textbf{s}}_t)).
 ```
 
-We can simulate observations from this model as for previous models via [`Patter.simulate_obs()`](@ref).
+We can simulate observations from this model as for previous models via `Patter.simulate_obs()`.
 
 # Custom sub-types
 
@@ -115,11 +114,11 @@ end
 
 For communication with `R`, all sub-types should include a `sensor_id` field. 
 
-Add corresponding methods to simulate observations via [`Patter.simulate_obs()`](@ref) and to evaluate log probabilities via [`Patter.logpdf_obs()`](@ref). 
+Add corresponding methods to simulate observations via `Patter.simulate_obs()` and to evaluate log probabilities via `Patter.logpdf_obs()`. 
 
 # Simulation
 
-[`Patter.simulate_obs()`](@ref) is an internal generic function that simulates observations, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
+`Patter.simulate_obs()` is an internal generic function that simulates observations, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
 -   `state`: A [`State`](@ref) instance;
 -   `model_obs`: A [`ModelObs`](@ref) instance;
 -   `t`: An integer that defines the time step;
@@ -132,11 +131,11 @@ function Patter.simulate_obs(state::StateCXYZ, model_obs::ModelObsDepthNormal, t
 end
 ```
 
-[`Patter.simulate_obs()`](@ref) is wrapped by [`simulate_yobs()`](@ref) for the simulation of observations.
+`Patter.simulate_obs()` is wrapped by [`simulate_yobs()`](@ref) for the simulation of observations.
 
 # Log probabilities 
 
-[`Patter.logpdf_obs()`](@ref) is a generic function that calculates the log probability (density) of an observation, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
+`Patter.logpdf_obs()` is a generic function that calculates the log probability (density) of an observation, given the animal's [`State`](@ref) and a `ModelObs` instance. This accepts the following arguments:
 -   `state`: A `State` instance;
 -   `model_obs`: A [`ModelObs`](@ref) instance;
 -   `t`: An integer that defines the time step;
@@ -151,7 +150,7 @@ function Patter.logpdf_obs(state::State, model_obs::ModelObsDepthNormal, t::Int6
   end
 ```
 
-[`Patter.logpdf_obs()`](@ref) is used in [`particle_filter()`](@ref) to evaluate the log-probability of the data given particle samples.
+`Patter.logpdf_obs()` is used in [`particle_filter()`](@ref) to evaluate the log-probability of the data given particle samples.
         
 """
 abstract type ModelObs end
@@ -171,7 +170,6 @@ struct ModelObsAcousticLogisTrunc <: ModelObs
     receiver_beta::Float64    
     receiver_gamma::Float64
 end
-@doc (@doc ModelObs) ModelObsAcousticLogisTrunc
 
 function simulate_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int64)
     # Evaluate the distance between the particle and receiver
@@ -181,7 +179,6 @@ function simulate_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::In
     # Define distribution
     rand(Bernoulli(prob)) + 0
 end
-@doc (@doc ModelObs) simulate_obs
 
 function logpdf_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int64, obs::Int64)
 
@@ -209,7 +206,6 @@ function logpdf_obs(state::State, model_obs::ModelObsAcousticLogisTrunc, t::Int6
     end
 
 end
-@doc (@doc ModelObs) logpdf_obs
 
 
 #########################
@@ -222,7 +218,6 @@ struct ModelObsAcousticContainer <: ModelObs
     receiver_y::Float64
     radius::Float64
 end
-@doc (@doc ModelObs) ModelObsAcousticContainer
 
 # A simulate_obs() method is not currently provided for ModelObsAcousticContainer
 # * Acoustic containers are calculated post-hoc from acoustic observations
@@ -266,7 +261,6 @@ struct ModelObsDepthUniform <: ModelObs
     depth_shallow_eps::Float64
     depth_deep_eps::Float64
 end
-@doc (@doc ModelObs) ModelObsDepthUniform
 
 function simulate_obs(state::State, model_obs::ModelObsDepthUniform, t::Int64)
     if model_obs.depth_shallow_eps == model_obs.depth_deep_eps == 0.0
@@ -304,7 +298,6 @@ struct ModelObsDepthNormalTrunc <: ModelObs
     # The individual may be `depth_deep_eps` deeper than the bathymetric depth
     depth_deep_eps::Float64
 end 
-@doc (@doc ModelObs) ModelObsDepthNormalTrunc
 
 # Truncated normal depth model log probability 
 # * The probability is highest if the individual is on the seabed

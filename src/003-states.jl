@@ -43,11 +43,11 @@ end
 New states should obey the following requirements:
 -   All states must include `map_value`, `x` and `y` fields;
 -   For states with a depth dimension, the depth field must be named `z` (for [`Patter.simulate_move()`](@ref));
--   For `R` users, all fields must be of type `Float64` for [`Patter.r_get_states()`](@ref) to parse state vectors;
+-   For `R` users, all fields must be of type `Float64` for `Patter.r_get_states()` to parse state vectors;
 
 To use a new `State` sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
 -   Define a corresponding [`ModelMove`](@ref) sub-type;
--   (optional) Define [`Patter.map_init()`](@ref) and [`Patter.states_init()`](@ref) methods for [`simulate_states_init()`](@ref) to simulate initial states;
+-   (optional) Define `Patter.map_init()` and `Patter.states_init()` methods for [`simulate_states_init()`](@ref) to simulate initial states;
 -   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move()`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
 -   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
 
@@ -58,7 +58,6 @@ abstract type State end
 # * map_value, x, y are essential (see documentation)
 # * This is much faster & facilitates the implementation of the depth observation models
 
-# State for RW in XY
 struct StateXY <: State
     # Map value
     map_value::Float64
@@ -66,7 +65,6 @@ struct StateXY <: State
     x::Float64
     y::Float64
 end 
-@doc (@doc State) StateXY
 
 # State for RW in XYZ
 struct StateXYZ <: State
@@ -77,7 +75,6 @@ struct StateXYZ <: State
     y::Float64
     z::Float64
 end 
-@doc (@doc State) StateXYZ
 
 # State for CRW in XY
 struct StateCXY <: State
@@ -89,7 +86,6 @@ struct StateCXY <: State
     # Horizontal direction
     heading::Float64  
 end 
-@doc (@doc State) StateCXY
 
 # State for CRW in XYZ
 struct StateCXYZ <: State
@@ -102,17 +98,9 @@ struct StateCXYZ <: State
     # Horizontal direction
     heading::Float64  
 end 
-@doc (@doc State) StateCXYZ
 
-# """
-#     state_is_valid(state::State, zdim::Bool)
 
-# Determine whether or not a `state` is valid.
-
-# This is an internal function that wraps [`is_valid()`](@ref).
-
-# See also [`State`](@ref), [`is_valid()`](@ref), 
-# """
+# Determine whether or not a state is valid (in water)
 function state_is_valid(state::State, zdim::Bool)
     if zdim
         return is_valid(state.map_value, state.z)

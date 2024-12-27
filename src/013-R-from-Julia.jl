@@ -1,45 +1,45 @@
 using DataFrames
 using OrderedCollections
 
-"""
-# `R` from `Julia`
+# """
+# # `R` from `Julia`
 
-A collection of internal functions that facilitate the translation of `Julia` objects into `R`. 
+# A collection of internal functions that facilitate the translation of `Julia` objects into `R`. 
 
-# Details
+# # Details
 
-* [`Patter.r_get_dataset()`](@ref) translates a Dictionary of observations into a `Vector` of `DataFrame`s that can be passed to `R`.
-* [`Patter.r_get_states()`](@ref) translates a `Matrix` of [`State`](@ref)s into a `DataFrame` that can be passed to `R`. In the input `Matrix`, each row is a particle and each column is a time step. 
-* [`Patter.r_get_particles()`](@ref) wraps [`Patter.r_get_states()`](@ref) and translates particle outputs (from [`particle_filter()`](@ref) and [`two_filter_smoother()`](@ref)) into a `NamedTuple` for `R`.
+# * [`Patter.r_get_dataset()`](@ref) translates a Dictionary of observations into a `Vector` of `DataFrame`s that can be passed to `R`.
+# * `Patter.r_get_states()` translates a `Matrix` of [`State`](@ref)s into a `DataFrame` that can be passed to `R`. In the input `Matrix`, each row is a particle and each column is a time step. 
+# * [`Patter.r_get_particles()`](@ref) wraps `Patter.r_get_states()` and translates particle outputs (from [`particle_filter()`](@ref) and [`two_filter_smoother()`](@ref)) into a `NamedTuple` for `R`.
 
-These functions are [`State`](@ref) and model agnostic; that is, they work irrespective of the input [`State`](@ref) and model sub-types. Custom methods are not required to handle novel sub-types. 
+# These functions are [`State`](@ref) and model agnostic; that is, they work irrespective of the input [`State`](@ref) and model sub-types. Custom methods are not required to handle novel sub-types. 
 
-# Returns 
+# # Returns 
 
-* [`Patter.r_get_dataset()`](@ref) returns a `Vector` of `DataFrame`s, with columns for `timestamp`, `obs` and the observation model parameters;
-* [`Patter.r_get_states()`](@ref) returns a long-format `DataFrame`, with columns for `path_id`, `timestep` and each state dimension;
-* [`Patter.r_get_particles()`](@ref) returns a `NamedTuple` of particle information, including:
-    - `states`: A `DataFrame` of [`State`](@ref) dimensions (from [`Patter.r_get_states()`](@ref));
-    - `diagnostics`: A `DataFrame` of algorithm diagnostics, including `timestep`, `timestamp`, `ess` and `maxlp` columns;
-    - `convergence`: A `Boolian` that defines algorithm convergence;
+# * [`Patter.r_get_dataset()`](@ref) returns a `Vector` of `DataFrame`s, with columns for `timestamp`, `obs` and the observation model parameters;
+# * `Patter.r_get_states()` returns a long-format `DataFrame`, with columns for `path_id`, `timestep` and each state dimension;
+# * [`Patter.r_get_particles()`](@ref) returns a `NamedTuple` of particle information, including:
+#     - `states`: A `DataFrame` of [`State`](@ref) dimensions (from `Patter.r_get_states()`);
+#     - `diagnostics`: A `DataFrame` of algorithm diagnostics, including `timestep`, `timestamp`, `ess` and `maxlp` columns;
+#     - `convergence`: A `Boolian` that defines algorithm convergence;
 
-"""
-function r_get end 
+# """
+# function r_get end 
 
 
-#### Convert a struct to an Ordered Dict
+# Convert a struct to an Ordered Dict
 function struct_to_dict(s)
     return OrderedCollections.OrderedDict(key => getfield(s, key) for key in propertynames(s))
 end
 
 
-#### Formulate dictionaries to hold the observation for a selected time stamp
+# Formulate dictionaries to hold the observation for a selected time stamp
 function dict_obs(timestamp, obs, sensor)
     OrderedCollections.OrderedDict(:timestamp => timestamp, :obs => obs, struct_to_dict(sensor)...)
 end 
 
 
-#### Extract dataset(s) from yobs for a selected model type
+# Extract dataset(s) from yobs for a selected model type
 function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
 
     # Initialise a Vector of DataFrames 
@@ -69,10 +69,9 @@ function r_get_dataset(yobs::Dict, model_type::Type{<: ModelObs})
     output
 
 end 
-@doc (@doc r_get) r_get_dataset
 
 
-#### Get a DataFrame of States
+# Get a DataFrame of States
 function r_get_states(states::Matrix{<:State}, 
                       timesteps::Vector{Int},
                       timestamps::Vector{Dates.DateTime})
@@ -102,7 +101,6 @@ function r_get_states(states::Matrix{<:State},
     df.timestamp = timestamps[indexin(df.timestep, timesteps)]
     select!(df, collect((:path_id, :timestep, :timestamp, fields...)))
 end
-@doc (@doc r_get) r_get_states
 
 # Examples:
 # Define state matrix: 
@@ -118,7 +116,7 @@ end
 # r_get_states(state)
 
 
-#### Get a Tuple of particle information (states, diagnostics, convergence)
+# Get a Tuple of particle information (states, diagnostics, convergence)
 function r_get_particles(particles::Particles)
     (
         states      = r_get_states(particles.states, 
@@ -128,4 +126,3 @@ function r_get_particles(particles::Particles)
         callstats   = particles.callstats
     )
 end 
-@doc (@doc r_get) r_get_particles

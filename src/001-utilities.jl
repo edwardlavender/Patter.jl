@@ -2,7 +2,12 @@ using Crayons
 using DataFrames
 using Dates
 
-# julia_warning()
+
+#########################
+#########################
+#### Console utilities
+
+# Julia warnings: display
 # * This function returns 'warning' messages in red
 # * In Patter.jl, we use julia_warning() rather than @warn because the former also forces display on Windows 
 function julia_warning(msg::String)
@@ -13,7 +18,12 @@ end
 
 # julia_warning("This is a warning!")
 
-# Check the names of a dataframe included required (req) entries
+
+#########################
+#########################
+#### DataFrame utilities
+
+# DataFrame columns: check columns include required entries 
 function check_names(input::DataFrame, req)
     # If req is a single string, convert to array
     req = isa(req, String) ? [req] : req  
@@ -29,7 +39,12 @@ end
 # check_names(DataFrame(x = 1, y = 2), "z")
 # check_names(DataFrame(x = 1, y = 2), ["a", "b"])
 
-# Compute the difference in time between t2 and t1 in seconds
+
+#########################
+#########################
+#### Time utilities 
+
+# Time differences: compute the time difference (s)
 # * `t2` and `t1` may be DateTime or Vector{DateTime}
 function diffsecs(t2::Union{Dates.DateTime, Vector{Dates.DateTime}}, 
                   t1::Union{Dates.DateTime, Vector{Dates.DateTime}}) 
@@ -48,7 +63,25 @@ end
 # )
 # diffsecs(t2.timeline, t1)
 
-# Calculate the duration of a function call (s)
+# Time differences: function call duration (s)
 function call_duration(call_start::Dates.DateTime)
     return diffsecs(now(), call_start)
 end 
+
+# (Internal) check_timeline_*() functions
+
+function check_timeline_entries(t_sim, t_obs)
+    issubset(t_obs, t_sim) || error("There are time stamps in `yobs` not found in `timeline`.")
+    nothing
+end
+
+function check_timeline_spacing(t_sim)
+    all(diff(t_sim) .== first(diff(t_sim))) || error("`timeline` must be a sequence of requally spaced time steps.")
+    nothing
+end
+
+function check_timeline(t_sim, t_obs)
+    check_timeline_entries(t_sim, t_obs)
+    check_timeline_spacing(t_sim)
+    nothing
+end

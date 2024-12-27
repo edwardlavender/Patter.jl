@@ -7,81 +7,6 @@ using ProgressMeter: @showprogress
 export particle_filter, particle_filter_iter
 
 
-# (Internal) check_timeline_*() functions
-
-function check_timeline_entries(t_sim, t_obs)
-    issubset(t_obs, t_sim) || error("There are time stamps in `yobs` not found in `timeline`.")
-    nothing
-end
-
-function check_timeline_spacing(t_sim)
-    all(diff(t_sim) .== first(diff(t_sim))) || error("`timeline` must be a sequence of requally spaced time steps.")
-    nothing
-end
-
-function check_timeline(t_sim, t_obs)
-    check_timeline_entries(t_sim, t_obs)
-    check_timeline_spacing(t_sim)
-    nothing
-end
-
-
-"""
-    resample(w::Vector{Float64}, n::Int)
-
-Given a weight vector `w`, resample a set of *indices* based on low-variance resampling algorithm from Thrun, Burgard and Fox's "Probabilistic Robotics".
-
-# Arguments
-
-- `w`: A `Vector{Float64}` of weights;
-- `n`: An integer that defines the number of particles;
-
-# Details
-
-This is an internal function that implements systematic resampling in the particle filter (see [`particle_filter()`](@ref)) and smoothing algorithms (see [`two_filter_smoother()`](@ref)). Note that for large `n`, the function is not numerically stable.
-
-# Returns
-
-- An integer vector of indices;
-
-# Example
-
-```Julia
-X = ["A", "B", "C", "D"]
-w = [0, 0, 0.75, 0.25]
-
-idx = resample(w, 12)
-X[idx]
-```
-
-# Source
-
-Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
-
-"""
-function resample(w::Vector{Float64}, n::Int = length(w))
-    if all(x -> x == 0 || isnan(x), w)
-        error("All elements are zero/NaN.")
-    end
-    w = w ./ sum(w)
-    idx = zeros(Int, n)
-    r = rand() * 1/n
-    c = w[1]
-    i = 1
-    for m in 1:n
-        # Calculate the next sample point
-        U = r + (m - 1) * (1 / n)
-        # Find the first weight that puts us past the sample point
-        while c < U && i < n
-            i += 1
-            c = c + w[i]
-        end
-        idx[m] = i
-    end
-    Random.shuffle!(idx)
-    idx
-end
-
 """
     Particles(states::Matrix, diagnostics::DataFrame, callstats::DataFrame)
 
@@ -143,6 +68,64 @@ function particulate(routine::String,
 
 end 
 
+
+"""
+    resample(w::Vector{Float64}, n::Int)
+
+(Internal) Given a weight vector `w`, resample a set of *indices* based on low-variance resampling algorithm from Thrun, Burgard and Fox's "Probabilistic Robotics".
+
+# Arguments
+
+- `w`: A `Vector{Float64}` of weights;
+- `n`: An integer that defines the number of particles;
+
+# Details
+
+This is an internal function that implements systematic resampling in the particle filter (see [`particle_filter()`](@ref)) and smoothing algorithms (see [`two_filter_smoother()`](@ref)). Note that for large `n`, the function is not numerically stable.
+
+# Returns
+
+- An integer vector of indices;
+
+# Example
+
+```Julia
+X = ["A", "B", "C", "D"]
+w = [0, 0, 0.75, 0.25]
+
+idx = resample(w, 12)
+X[idx]
+```
+
+# Source
+
+Code adapted from https://github.com/JuliaStats/StatsBase.jl/issues/124.
+
+"""
+function resample(w::Vector{Float64}, n::Int = length(w))
+    if all(x -> x == 0 || isnan(x), w)
+        error("All elements are zero/NaN.")
+    end
+    w = w ./ sum(w)
+    idx = zeros(Int, n)
+    r = rand() * 1/n
+    c = w[1]
+    i = 1
+    for m in 1:n
+        # Calculate the next sample point
+        U = r + (m - 1) * (1 / n)
+        # Find the first weight that puts us past the sample point
+        while c < U && i < n
+            i += 1
+            c = c + w[i]
+        end
+        idx[m] = i
+    end
+    Random.shuffle!(idx)
+    idx
+end
+
+
 """
 # Particle filter
 
@@ -158,7 +141,7 @@ A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t â
   - Each `Tuple` should contain (a) the observation and (b) the model parameters (that is, a [`ModelObs`](@ref) instance);
 - `model_move`: A [`ModelMove`](@ref) instance:
     - The movement model describes movement from one time step to the next and therefore depends implicitly on the resolution of `timeline`;
-    - The movement model should align with the [`State`](@ref) instances in `xinit`. For example, a two-dimensional state ([`StateXY`](@ref)) requires a corresponding movement model instance (i.e., [`ModelMoveXY`](@ref));
+    - The movement model should align with the [`State`](@ref) instances in `xinit`. For example, a two-dimensional state (`StateXY`) requires a corresponding movement model instance (i.e., `ModelMoveXY`);
 - `n_move`: An integer that defines the number of attempts used to find a legal move;
     - All [`ModelMove`](@ref) sub-types contain a `map` field that defines the region(s) within which movements are allowed (see [`is_valid()`](@ref));
     - Each particle is moved up to `n_move` times, until a valid movement is simulated;
@@ -185,11 +168,11 @@ For every time step in the `timeline`, the internal function [`Patter.simulate_m
 
 ## Likelihood
 
-Observations are used to weight simulated particles. To simulate observations for filtering, use [`simulate_yobs()`](@ref). To assemble real-world observations for filtering, see [`assemble_yobs()`](@ref). For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via [`logpdf_obs()`](@ref). For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding [`logpdf_obs()`](@ref) method is required. The maximum weight across all particles (`maxlp`) is recorded at each time step as an algorithm diagnostic. (This metric can be intepreted as the maximum log-posterior if resampling is implemented at every time step.)
+Observations are used to weight simulated particles. To simulate observations for filtering, use [`simulate_yobs()`](@ref). To assemble real-world observations for filtering, see [`assemble_yobs()`](@ref). For each valid [`State`](@ref) and time stamp in `yobs`, the log-probability of each observation, given the [`State`](@ref), is evaluated via `Patter.logpdf_obs()`. For custom [`State`](@ref) or [`ModelObs`](@ref) sub-types, a corresponding `Patter.logpdf_obs()` method is required. The maximum weight across all particles (`maxlp`) is recorded at each time step as an algorithm diagnostic. (This metric can be intepreted as the maximum log-posterior if resampling is implemented at every time step.)
 
 ## Resampling
 
-Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`resample()`](@ref)), at time steps in `t_resample` or when the effective sample size is less than or equal to `n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
+Particles are periodically re-sampled, with replacement, using the low-variance systematic re-sampling algorithm (via [`Patter.resample()`](@ref)), at time steps in `t_resample` or when the effective sample size is less than or equal to `n_resample`. This has the effect of eliminating impossible particles and duplicating likely ones.
 
 The algorithm continues in this way, iterating over the `timeline`, simulating, weighting and (re)sampling particles. At each time step, `n_record` particles are saved in memory. If the function fails to converge, a warning is returned alongside the outputs up to that time step. Otherwise, the function will continue to the end of the time series.
 
@@ -210,7 +193,7 @@ Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a 
 * [`State`](@ref), [`ModelMove`](@ref) and [`ModelObs`](@ref) for [`State`](@ref), movement model and observation model sub-types;
 - [`simulate_yobs()`](@ref) and [`assemble_yobs()`](@ref) to prepare observations for the particle filter;
 * [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) for the internal routines used to simulate new [`State`](@ref)s;
-* [`logpdf_obs()`](@ref) methods to evaluate the log probability of observations;
+* `Patter.logpdf_obs()` methods to evaluate the log probability of observations;
 * [`two_filter_smoother()`](@ref) to implement particle smoothing;
 
 """

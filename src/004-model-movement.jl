@@ -58,7 +58,7 @@ New [`ModelMove`](@ref) structures should obey the following requirements:
 
 To use a new [`ModelMove`](@ref) sub-type in the simulation of animal movements (via [`simulate_path_walk()`](@ref)) and particle-filtering algorithms, the following steps are also necessary:
 -   Define a corresponding [`State`](@ref) sub-type;
--   (optional) Define [`Patter.map_init()`](@ref) and [`Patter.states_init()`](@ref) methods for [`simulate_states_init()`](@ref) to simulate initial states;
+-   (optional) Define `Patter.map_init()` and `Patter.states_init()` methods for [`simulate_states_init()`](@ref) to simulate initial states;
 -   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move()`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
 -   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
 
@@ -75,7 +75,6 @@ struct ModelMoveXY{T, U, V, W} <: ModelMove
     # Distribution of headings
     dbn_heading::W
 end 
-@doc (@doc ModelMove) ModelMoveXY
 
 # Random walk in X, Y and Z
 struct ModelMoveXYZ{T, U, V, W, X} <: ModelMove
@@ -89,7 +88,6 @@ struct ModelMoveXYZ{T, U, V, W, X} <: ModelMove
     # Depth
     dbn_z::X
 end 
-@doc (@doc ModelMove) ModelMoveXYZ
 
 # Correlated random walk in XY
 struct ModelMoveCXY{T, U, V, W} <: ModelMove
@@ -102,7 +100,6 @@ struct ModelMoveCXY{T, U, V, W} <: ModelMove
     # * This must be symmetrically centred around zero
     dbn_heading_delta::W
 end 
-@doc (@doc ModelMove) ModelMoveCXY
 
 # Correlated random walk in XYZ
 struct ModelMoveCXYZ{T, U, V, W, X} <: ModelMove
@@ -117,20 +114,16 @@ struct ModelMoveCXYZ{T, U, V, W, X} <: ModelMove
     # Change in depth 
     dbn_z_delta::X
 end 
-@doc (@doc ModelMove) ModelMoveCXYZ
 
 
 #########################
 #########################
 #### Simulate movement steps
 
-# simulate_step() methods
-# * The user must provide a new method for new State types
-
 """
     simulate_step(state::State, model_move::ModelMove, t::Int64)
 
-Simulate a (tentative) step from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
+(Internal) Simulate a (tentative) step from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
 
 # Arguments
 
@@ -150,7 +143,7 @@ Simulate a (tentative) step from one location ([`State`](@ref)) into a new locat
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
 * [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
+* [`Patter.is_valid()`](@ref) to determine whether or not a simulated state is valid;
 * [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
@@ -203,7 +196,7 @@ end
 """
     simulate_move(state::State, model_move::ModelMove, t::Int64, n_trial::Real)
 
-Simulate movement from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
+(Internal) Simulate movement from one location ([`State`](@ref)) into a new location ([`State`](@ref)).
 
 # Arguments
 
@@ -226,7 +219,7 @@ Simulate movement from one location ([`State`](@ref)) into a new location ([`Sta
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
 * [`Patter.simulate_step()`](@ref) to simulate a new [`State`](@ref);
-* [`is_valid()`](@ref) to determine whether or not a simulated state is valid;
+* [`Patter.is_valid()`](@ref) to determine whether or not a simulated state is valid;
 * [`Patter.simulate_move()`](@ref) to simulate states iteratively until a valid state is found;
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
@@ -262,7 +255,7 @@ end
 """
     logpdf_step(state_from::State, state_to::State, model_move::ModelMove, length, heading)
     
-Evaluate the (unnormalised) log probability of an (unrestricted) movement step. 
+(Internal) Evaluate the (unnormalised) log probability of an (unrestricted) movement step. 
 
 # Arguments
 
@@ -275,7 +268,7 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 
 # Details
 
-[`logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`logpdf_step()`](@ref) is wrapped by [`logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`Patter.logpdf_step()`](@ref) is an internal generic function that evaluates the (unnormalised) log probability of an (unrestricted) movement step between two [`State`](@ref)(s) (i.e., locations). Methods are provided for the built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types, but need to be provided for custom sub-types. Internally, [`Patter.logpdf_step()`](@ref) is wrapped by [`Patter.logpdf_move()`](@ref), which evaluates the log probability of movement between two [`State`](@ref)s, accounting for restrictions to movement; that is, [`Patter.logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. This is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -285,8 +278,8 @@ Evaluate the (unnormalised) log probability of an (unrestricted) movement step.
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
 * [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
-* [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
-* [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
+* [`Patter.logpdf_step()`](@ref) and [`Patter.logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
+* [`Patter.logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """
@@ -325,7 +318,7 @@ end
                 n_sim::Int,
                 cache::Union{Dict, Nothing})
     
-Evaluate the log probability of a movement between two [`State`](@ref)s (`state_from` and `state_to`). 
+(Internal) Evaluate the log probability of a movement between two [`State`](@ref)s (`state_from` and `state_to`). 
 
 # Arguments
 
@@ -334,13 +327,13 @@ Evaluate the log probability of a movement between two [`State`](@ref)s (`state_
 - `state_zdim`: A `Boolian` that defines whether or not `state_from` and `state_to` contain a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state_from` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state_from` and `state_to` are [`StateXY`](@ref) instances);
+- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state_from` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state_from` and `state_to` are `StateXY` instances (see [`State`](@ref)));
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (used to approximate the normalisation constant);
 - `cache`: (optional) A Dict of normalisation constants including `state_from`;
 
 # Details
 
-[`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, t, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `model_move` is 'horizontal (e.g., `state_from` and `state_to` are two-dimensional, [`StateXY`](@ref) instances), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
+[`Patter.logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between two [`State`](@ref)(s) (i.e., locations). This function wraps [`Patter.logpdf_step()`](@ref), accounting for accounting for restrictions to movement; that is, [`Patter.logpdf_move()`](@ref) evaluates `logpdf_step(state_from, state_to, model_move, t, length, heading) + log(abs(determinate)) - log(Z)` where `Z` is the normalisation constant. If `model_move` is 'horizontal (e.g., `state_from` and `state_to` are two-dimensional, `StateXY` instances), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements between two locations are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state_from.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is required to approximate the normalisation constant, accounting for invalid movements, which is more expensive (see [`logpdf_move_normalisation()`](@ref)). [`Patter.logpdf_move()`](@ref) is used for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns
 
@@ -350,8 +343,8 @@ Evaluate the log probability of a movement between two [`State`](@ref)s (`state_
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
 * [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
-* [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
-* [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
+* [`Patter.logpdf_step()`](@ref) and [`Patter.logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
+* [`Patter.logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """
@@ -402,7 +395,7 @@ end
                               vmap::Union{GeoArray, Nothing},
                               n_sim::Int)
 
-Approximate the (log) normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
+(Internal) Approximate the (log) normalisation constant for the (log) probability density of movement from one [`State`](@ref) (location) into another. 
 
 # Arguments
 
@@ -410,12 +403,12 @@ Approximate the (log) normalisation constant for the (log) probability density o
 - `state_zdim`: A `Boolian` that defines whether or not `state` contains a `z` (depth) dimension;
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `t`: An integer that defines the time step;
-- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state` is a [`StateXY`](@ref) instance);
+- `vmap`: (optional) A `GeoArray` that maps the region within which movements from `state` are always legal. Valid regions must equal 1. `vmap` can be provided for 'horizontal' movement models (e.g., if `state` is a `StateXY`);
 - `n_sim`: An integer that defines the number of Monte Carlo simulations;
 
 # Details
 
-This internal function computes the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state`) into another (required to account for the truncation of the movement model by land). If `model_move` is 'horizontal (e.g., `state` is a two-dimensional, [`StateXY`](@ref) instance), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements from that `state` are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is used to estimate the normalisation constant. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state`. This function is used by [`logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
+This internal function computes the normalisation constant for the (log) probability of movement from one [`State`](@ref) (`state`) into another (required to account for the truncation of the movement model by land). If `model_move` is 'horizontal (e.g., `state` is a two-dimensional, `StateXY` instance), a 'validity map' (`vmap`) can be provided. This is a `GeoArray` that define the regions within which movements from that `state` are always legal. In the case of an aquatic animal, this is the region of the study area that is the sea, shrunk by `state.mobility`. In this instance, the normalisation constant is simply `log(1.0)`. Otherwise, a Monte Carlo simulation of `n_sim` iterations is used to estimate the normalisation constant. A Beta(1, 1) prior is used to correct for simulations that fail to generate valid move from `state`. This function is used by [`Patter.logpdf_move()`](@ref) to evaluate the (log) probability of movement between two states, which is required for particle smoothing (see [`two_filter_smoother()`](@ref)).
 
 # Returns 
 
@@ -425,8 +418,8 @@ This internal function computes the normalisation constant for the (log) probabi
 
 * [`State`](@ref) and [`ModelMove`](@ref) for [`State`](@ref) and movement model sub-types;
 * [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) to simulate new [`State`](@ref)s;
-* [`logpdf_step()`](@ref) and [`logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
-* [`logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
+* [`Patter.logpdf_step()`](@ref) and [`Patter.logpdf_move()`](@ref) to evaluate the log-probability of movement between two locations;
+* [`Patter.logpdf_move_normalisation()`](@ref) for estimation of the normalisation constant;
 * [`two_filter_smoother()`](@ref) for the front-end function that uses these routines for particle smoothing;
 
 """

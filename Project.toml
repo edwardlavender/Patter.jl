@@ -1,7 +1,7 @@
 name = "Patter"
 uuid = "faabfbac-af09-47ee-bc95-5e336c516b5a"
 authors = ["edwardlavender <edward.lavender@eawag.ch>"]
-version = "0.1.0"
+version = "2.0.0"
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"

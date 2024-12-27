@@ -19,13 +19,13 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 - `xfwd`: A `Matrix` of [`State`](@ref)s from the forward filter (see [`particle_filter()`](@ref));
 - `xbwd`: A `Matrix` of [`State`](@ref)s from the backward filter (see [`particle_filter()`](@ref));
 - `model_move`: A [`ModelMove`](@ref) instance;
-- `vmap`: (optional) A `GeoArray` that defines the 'validity map' (see [`logpdf_move()`](@ref));
-- `n_sim`: An integer that defines the number of Monte Carlo simulations (see [`logpdf_move()`](@ref));
-- `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`logpdf_move()`](@ref));
+- `vmap`: (optional) A `GeoArray` that defines the 'validity map' (see [`Patter.logpdf_move()`](@ref));
+- `n_sim`: An integer that defines the number of Monte Carlo simulations (see [`Patter.logpdf_move()`](@ref));
+- `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`Patter.logpdf_move()`](@ref));
 
 # Details
 
-[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `vmap` and `n_sim` arguments support the calculate of probability densities (see [`logpdf_move()`](@ref)). For movement models for which the density only depends on fields in `xbwd` and `xfwd`, set `cache = true` to precompute and store normalisation constants for density calculations for unique `xbwd` elements. Note that since typically only a subsample of particles from [`particle_filter()`](@ref) are retained in memory, it is not guaranteed that valid moves will exist between particle pairs at all time steps. At time step(s) in which the two filters are incompatible, 50 % of particles are retained from the forward filter and 50 % from the backward filter with a warning. The effective sample size at such time steps is set to `NaN`, providing an index and counter for problematic time steps (see Returns). 
+[`two_filter_smoother()`](@ref) smooths particles from the particle filter (see [`particle_filter()`](@ref)). The `timeline` from the particle filter should be supplied as well as a `Matrix` of particles from a forward run and a backward run. The two filter smoother works by iteratively resampling particles in line with the probability density of movement between particles from the backward filter at time `t` and particles from the forward filter at time `t - 1`. [`Patter.logpdf_move()`](@ref) is an internal function that evaluates the log probability of a movement step between particles. This function wraps the [`Patter.logpdf_step()`](@ref) generic. Methods are provided for built-in [`State`](@ref) and [`ModelMove`](@ref) sub-types. To use custom sub-types, a corresponding [`Patter.logpdf_step()`](@ref) method should be provided. In [`two_filter_smoother()`](@ref), the `vmap` and `n_sim` arguments support the calculate of probability densities (see [`Patter.logpdf_move()`](@ref)). For movement models for which the density only depends on fields in `xbwd` and `xfwd`, set `cache = true` to precompute and store normalisation constants for density calculations for unique `xbwd` elements. Note that since typically only a subsample of particles from [`particle_filter()`](@ref) are retained in memory, it is not guaranteed that valid moves will exist between particle pairs at all time steps. At time step(s) in which the two filters are incompatible, 50 % of particles are retained from the forward filter and 50 % from the backward filter with a warning. The effective sample size at such time steps is set to `NaN`, providing an index and counter for problematic time steps (see Returns). 
 
 # Returns 
 
@@ -34,7 +34,7 @@ A two-filter particle smoother that samples from `f(X_t | {Y_1 ... Y_T}) for t â
 # See also
 
 - [`particle_filter()`](@ref) implements the particle filter;
-- [`logpdf_step()`](@ref), [`logpdf_move_normalisation()`](@ref) and [`logpdf_move()`](@ref) evaluate the log probability (density) of movement between two [`State`](@ref)s;
+- [`Patter.logpdf_step()`](@ref), [`logpdf_move_normalisation()`](@ref) and [`Patter.logpdf_move()`](@ref) evaluate the log probability (density) of movement between two [`State`](@ref)s;
 - [`two_filter_smoother()`](@ref) implements the two-filter particle smoother;
 
 # Source 

@@ -62,7 +62,7 @@ For a series of simulated paths, simulate a dictionary of observations.
 
 # Details
 
-The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`](@ref)). For each simulated path, the function iterates over each step in `timeline` and simulates observations using the `Vector` of observation models. Observations are simulated by the internal generic [`simulate_obs()`](@ref) via `simulate_obs(State, model, t)`, where `t` is the time step. Methods are provided for the built-in [`State`](@ref)s and [`ModelObs`](@ref) sub-types. For custom sub-types, a corresponding [`simulate_obs()`](@ref) method is required. Simulated observations can be used in the particle filter to reconstruct the underlying movements (see [`particle_filter()`](@ref)).
+The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`](@ref)). For each simulated path, the function iterates over each step in `timeline` and simulates observations using the `Vector` of observation models. Observations are simulated by the internal generic `Patter.simulate_obs()` via `simulate_obs(State, model, t)`, where `t` is the time step. Methods are provided for the built-in [`State`](@ref)s and [`ModelObs`](@ref) sub-types. For custom sub-types, a corresponding `Patter.simulate_obs()` method is required. Simulated observations can be used in the particle filter to reconstruct the underlying movements (see [`particle_filter()`](@ref)).
 
 # Returns
 - A `Dict`, with one entry for each path:
