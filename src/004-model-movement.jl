@@ -454,7 +454,7 @@ function logpdf_move_normalisation(state::State, state_zdim::Bool, model_move::M
 end
 
 # Precompute normalisation constants for all unique states 
-function logpdf_move_normalisations(states::Matrix, model_move::ModelMove, vmap::Union{GeoArray, Nothing}, n_sim::Int)
+function logpdf_move_normalisations(states::Matrix{<:State}, model_move::ModelMove, vmap::Union{GeoArray, Nothing}, n_sim::Int)
 
     # Identify dimension of input state
     state_zdim = hasfield(typeof(states[1]), :z)

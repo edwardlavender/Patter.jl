@@ -223,7 +223,7 @@ function particle_filter(
     #### Check user inputs
     # Check time line
     timeline = sort(timeline)
-    check_timeline(timeline, keys(yobs))
+    check_timeline(timeline, collect(keys(yobs)))
     # Check particle numbers
     if nr > np
         error("The number of initial particles in `xinit` ($np) must be >= the number of recorded partices in `n_record` ($nr).")

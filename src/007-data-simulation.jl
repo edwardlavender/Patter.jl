@@ -50,7 +50,7 @@ end
 
 
 """
-    simulate_yobs(; paths::Matrix, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
+    simulate_yobs(; paths::Matrix{<:State}, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
 
 For a series of simulated paths, simulate a dictionary of observations. 
 
@@ -77,7 +77,7 @@ The function expects a `Matrix` of simulated paths (see [`simulate_path_walk()`]
 * [`simulate_yobs()`](@ref) to simulate observations arising from simulated movements (via [`ModelObs`](@ref));
 
 """
-function simulate_yobs(; paths::Matrix, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
+function simulate_yobs(; paths::Matrix{<:State}, model_obs::Vector{ModelObs}, timeline::Vector{DateTime})
     
     #### Initialise a set of dictionaries (one per path)
     # Initialise a set of dictionaries

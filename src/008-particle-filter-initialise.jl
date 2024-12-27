@@ -8,10 +8,10 @@ export simulate_states_init
     simulate_states_init(; map::Rasters.Raster,
                            timeline::Vector{DateTime}, 
                            state_type::Type{<: State}, 
-                           xinit, 
+                           xinit::Union{Nothing, DataFrame}, 
                            model_move::ModelMove, 
-                           datasets, 
-                           model_obs_types, 
+                           datasets::Union{Nothing, Vector}, 
+                           model_obs_types::Union{Nothing, Vector}, 
                            n_particle::Int, 
                            direction::String = "forward", 
                            output = "DataFrame")
@@ -49,7 +49,7 @@ These functions support the simulation of initial states for animal movement wal
 
 If `xinit = nothing`, initial coordinates are sampled from `map`.
 
-The region(s) within `map` from which initial coordinates are sampled can be optionally restricted by the provision of the observation datasets and the associated model sub-types (via `Patter.map_init_iter`). This option does not apply to [`simulate_path_walk()`](@ref) but is used in [`particle_filter()`](@ref) where observation models are used. In this instance, `Patter.map_init_iter` iterates over each model and uses the `Patter.map_init()` method to update `map`. The following methods are implemented:
+The region(s) within `map` from which initial coordinates are sampled can be optionally restricted by the provision of the observation datasets and the associated model sub-types (via [`Patter.map_init_iter()`](@ref)). This option does not apply to [`simulate_path_walk()`](@ref) but is used in [`particle_filter()`](@ref) where observation models are used. In this instance, [`Patter.map_init_iter()`](@ref) iterates over each model and uses the `Patter.map_init()` method to update `map`. The following methods are implemented:
   - Default. The default method returns `map` unchanged.
   - `model_obs_type::ModelObsAcousticLogisTrunc`. This method uses acoustic observations to restrict `map` via Lavender et al.'s ([2023](https://doi.org/10.1111/2041-210X.14193)) acoustic--container algorithm. The function identifies the receiver(s) that recorded detection(s) immediately before, at and following the first time step (`timeline[start]`, where `start` is `1` if `direction = "forward"` and `length(timeline)` otherwise). The 'container' within which the individual must be located from the perspective of each receiver is defined by the time difference and the individual's mobility (that is, the maximum moveable distance the individual could move between two time steps), which must be specified in `model_move.mobility`. The intersection between all containers defines the possible locations of the individual at the first time step.
   - `model_obs_type::ModelObsDepthUniform`. This method uses the depth observations to restrict `map` (which should represent the bathymetry in a region). The individual must be within a region in which the observed depth at `timeline[start]` is within a depth envelope around the bathymetric depth defined by the parameters `depth_shallow_eps` and `depth_deep_eps` (see [`ModelObs`](@ref)). (If there is no observation at `timeline[start]`, `map` is returned unchanged.)
@@ -237,29 +237,29 @@ function coords_init(map, size)
 end
 
 # Convert a `DataFrame` of coordinates (map_value, x, y) to a DataFrame with all state dimensions
-function states_init(state_type::Type{<: State}, coords)
+function states_init(state_type::Type{<: State}, coords::DataFrame)
  error("For custom states, you need to define a `Patter.states_init()` method or provide `.xinit`.")
 end 
 
-function states_init(state_type::Type{StateXY}, coords)
+function states_init(state_type::Type{StateXY}, coords::DataFrame)
     return coords
 end 
 
-function states_init(state_type::Type{StateXYZ}, coords)
+function states_init(state_type::Type{StateXYZ}, coords::DataFrame)
     N = nrow(coords)
     # Add z coordinate
     @transform! coords :z = :map_value .* rand(N)
     return coords
 end 
 
-function states_init(state_type::Type{StateCXY}, coords)
+function states_init(state_type::Type{StateCXY}, coords::DataFrame)
     N = nrow(coords)
     # Add heading
     @transform! coords :heading = rand(N) .* 2 .* π
     return coords
 end 
 
-function states_init(state_type::Type{StateCXYZ}, coords)
+function states_init(state_type::Type{StateCXYZ}, coords::DataFrame)
     N = nrow(coords)
     # Add z coordinate
     @transform! coords :z = :map_value .* rand(N)
@@ -273,10 +273,10 @@ function simulate_states_init(;
     map::Rasters.Raster, 
     timeline::Vector{DateTime},
     state_type::Type{<: State},
-    xinit,
+    xinit::Union{Nothing, DataFrame},
     model_move::ModelMove, 
-    datasets,                    # ::Vector, 
-    model_obs_types,             # ::Vector, 
+    datasets::Union{Nothing, Vector},
+    model_obs_types::Union{Nothing, Vector},
     n_particle::Int,
     direction::String = "forward", 
     output = "DataFrame")

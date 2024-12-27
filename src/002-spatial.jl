@@ -170,14 +170,14 @@ end
 
 
 # Convert cartesian to polar coordinates. 
-function cartesian_to_polar(x, y)
+function cartesian_to_polar(x::Real, y::Real)
     # (length = sqrt(x^2 + y^2), angle = atan(y, x))
     (length = hypot(x, y), angle = atan(y, x))
 end 
 
 
 # Compute the smallest absolute rotation between two angles.
-function abs_angle_difference(a1, a2)
+function abs_angle_difference(a1::Real, a2::Real)
     angle_delta = mod(abs(a1 - a2), 2π)
     min(angle_delta, 2π - angle_delta)
 end

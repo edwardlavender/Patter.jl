@@ -24,7 +24,7 @@ end
 #### DataFrame utilities
 
 # DataFrame columns: check columns include required entries 
-function check_names(input::DataFrame, req)
+function check_names(input::DataFrame, req::Union{String, Vector{String}})
     # If req is a single string, convert to array
     req = isa(req, String) ? [req] : req  
     if !all(r -> r ∈ names(input), req)
@@ -53,18 +53,19 @@ function call_duration(call_start::Dates.DateTime)
 end 
 
 # (Internal) check_timeline_*() functions
+# * t_obs may be Vector(Any) from R
 
-function check_timeline_entries(t_sim, t_obs)
+function check_timeline_entries(t_sim::Vector{Dates.DateTime}, t_obs::Vector)
     issubset(t_obs, t_sim) || error("There are time stamps in `yobs` not found in `timeline`.")
     nothing
 end
 
-function check_timeline_spacing(t_sim)
-    all(diff(t_sim) .== first(diff(t_sim))) || error("`timeline` must be a sequence of requally spaced time steps.")
+function check_timeline_spacing(t_sim::Vector{Dates.DateTime})
+    all(diff(t_sim) .== first(diff(t_sim))) || error("`timeline` must be a sequence of regularly spaced time steps.")
     nothing
 end
 
-function check_timeline(t_sim, t_obs)
+function check_timeline(t_sim::Vector{Dates.DateTime}, t_obs::Vector)
     check_timeline_entries(t_sim, t_obs)
     check_timeline_spacing(t_sim)
     nothing
