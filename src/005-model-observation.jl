@@ -231,6 +231,9 @@ function logpdf_obs(state::State, model::ModelObsAcousticContainer, t::Int64, ob
     # Only particles within model.radius are permitted
     # * radius is a pre-calculated field in model
     # * (radius = receiver_gamma + (receiver_timestep - t) * mobility)
+    # * Note that we should technically normalise densities over the area spanned by the container
+    # * In practice, we don't need to do this b/c we adjust all valid particles by the same constant
+    # * And we normalise the weights in the particle filter, so this cancels out 
     return ifelse(dist <= model.radius, 0.0, -Inf)
 end
 
@@ -303,6 +306,7 @@ end
 # * The probability is highest if the individual is on the seabed
 # * The individual can be up to model_obs.depth_deep_eps deeper than the seabed
 # * Probability decays away from the seabed toward the surface
+# * Note the need to normalise logpdfs, since the information content depends on the bathymetric depth
 function simulate_obs(state::State, model_obs::ModelObsDepthNormalTruncSeabed, t::Int64)
     dbn   = truncated(Normal(state.map_value, model_obs.depth_sigma), 
                       0.0, state.map_value + model_obs.depth_deep_eps)
