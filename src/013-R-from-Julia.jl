@@ -10,7 +10,7 @@ using OrderedCollections
 
 # * [`Patter.r_get_dataset()`](@ref) translates a Dictionary of observations into a `Vector` of `DataFrame`s that can be passed to `R`.
 # * `Patter.r_get_states()` translates a `Matrix` of [`State`](@ref)s into a `DataFrame` that can be passed to `R`. In the input `Matrix`, each row is a particle and each column is a time step. 
-# * [`Patter.r_get_particles()`](@ref) wraps `Patter.r_get_states()` and translates particle outputs (from [`particle_filter()`](@ref) and [`two_filter_smoother()`](@ref)) into a `NamedTuple` for `R`.
+# * [`Patter.r_get_particles()`](@ref) wraps `Patter.r_get_states()` and translates particle outputs (from [`particle_filter()`](@ref) and [`particle_smoother_two_filter()`](@ref)) into a `NamedTuple` for `R`.
 
 # These functions are [`State`](@ref) and model agnostic; that is, they work irrespective of the input [`State`](@ref) and model sub-types. Custom methods are not required to handle novel sub-types. 
 

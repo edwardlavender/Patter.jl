@@ -1,18 +1,19 @@
-using Random
-using Dates
-using LogExpFunctions: logsumexp
 using Base.Threads: @threads
+using Dates
 using ProgressMeter: @showprogress
+using JLD2
+using LogExpFunctions: logsumexp
+using Random
 
-export particle_filter, particle_filter_iter
+export particle_filter
 
 
 """
-    Particles(states::Matrix, diagnostics::DataFrame, callstats::DataFrame)
+    Particles(states::Union{Nothing, Matrix{<:State}}, diagnostics::DataFrame, callstats::DataFrame)
 
 # Fields
 
-- `states`: A `Matrix` of [`State`](@ref)s:
+- `states`: (optional) A `Matrix` of [`State`](@ref)s:
     - Each row corresponds to a particle;
     - Each column corresponds to the `timestep`;
 - `diagnostics`: A `DataFrame` of algorithm diagnostics:
@@ -25,31 +26,38 @@ export particle_filter, particle_filter_iter
     -   routine: A `String` that defines the algorithm;
     -   n_particle: An `Int` that defines the number of particles;
     -   n_iter: An `Int` or `NaN` that defines the number of iterations (trials);
-    -   convergence: A `Boolian` that defines whether or not the algorithm reached the end of the `timeline`;
+    -   convergence: A `Boolian` that defines convergence;
     -   time: A `Float64` that defines the duration (s) of the function call;
+
+# Details
+
+* `states` is `nothing` if [`particle_filter()`](@ref) or [`particle_smoother_two_filter()`](@ref) are implemented with `batch`ing. 
+* `convergence` is defined as follows:
+    - In [`particle_filter()`](@ref), `convergence` defines whether or not the filter reached the end of the `timeline`;
+    - In [`particle_smoother_two_filter()`](@ref), `convergence` defines whether or not correct smoothing was achieved on at least 95 % of time steps. 'Correct smoothing' is possible when there at at least some valid moves between the subset of recorded particles on the backward filter and those on the forward filter (for the previous time step). 
 
 # See also
 
 `Particles` objects are returned by:
-    - [`particle_filter()`](@ref) 
-    - [`two_filter_smoother()`](@ref)
+- [`particle_filter()`](@ref)
+- [`particle_smoother_two_filter()`](@ref)
 
 """
 struct Particles
-    states::Matrix{<:State}
+    states::Union{Nothing, Matrix{<:State}}
     diagnostics::DataFrame
     callstats::DataFrame
 end
 
-# Create 'particles' structure in particle_filter() or two_filter_smoother()
+# Create 'particles' structure in particle_filter() or particle_smoother_two_filter()
 function particulate(routine::String, 
                      timestamp::Dates.DateTime, 
                      timeline::Vector{Dates.DateTime},
-                     states::Matrix{<:State},
+                     states::Union{Nothing, Matrix{<:State}},
                      ess::Vector{Float64}, 
                      maxlp::Vector{Float64}, 
                      n_particle::Int, 
-                     n_iter::Union{Int, Float64}, # NaN in two_filter_smoother()
+                     n_iter::Union{Int, Float64}, # NaN in particle_smoother_two_filter()
                      convergence::Bool)
 
     diagnostics = DataFrame(timestep  = collect(1:length(timeline)), 
@@ -81,7 +89,7 @@ end
 
 # Details
 
-This is an internal function that implements systematic resampling in the particle filter (see [`particle_filter()`](@ref)) and smoothing algorithms (see [`two_filter_smoother()`](@ref)). Note that for large `n`, the function is not numerically stable.
+This is an internal function that implements systematic resampling in the particle filter (see [`particle_filter()`](@ref)) and smoothing algorithms (see [`particle_smoother_two_filter()`](@ref)). Note that for large `n`, the function is not numerically stable.
 
 # Returns
 
@@ -126,10 +134,185 @@ function resample(w::Vector{Float64}, n::Int = length(w))
 end
 
 
-"""
-# Particle filter
+# Internal particle filter function 
+function _particle_filter(
+    ; timeline::Vector{DateTime},
+    xinit::Vector{<:State},
+    yobs::Dict,
+    model_move::ModelMove,
+    n_move::Int = 100_000,
+    n_record::Int = 1000,
+    n_resample::Float64 = Float64(n_record),
+    t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
+    direction::String = "forward", 
+    batch::Union{Nothing, Vector{String}} = nothing)
 
-A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t ∈ 1:t`.
+    #### Define essential parameters
+    # Number of time steps
+    nt = length(timeline)
+    # Number of particles
+    np = length(xinit)
+    # Number of recorded particles
+    nr = n_record
+    # Use t_resample
+    do_t_resample = !isnothing(t_resample)
+
+    #### Check user inputs
+    # Check time line
+    timeline = sort(timeline)
+    check_timeline(timeline, collect(keys(yobs)))
+    # Check particle numbers
+    if nr > np
+        error("The number of initial particles in `xinit` ($np) must be >= the number of recorded partices in `n_record` ($nr).")
+    end
+
+    #### Handle batches
+    do_batch = !isnothing(batch)
+    nb       = do_batch ? length(batch) : 1
+
+    #### Define filter direction
+    if direction == "forward"
+        start = 1; finish = nt;
+        timesteps = start:finish
+        if do_batch
+            batch = sort(batch)
+        end 
+    elseif direction == "backward"
+        start = nt; finish = 1;
+        timesteps = start:-1:finish
+        if do_batch
+            batch = sort(batch, rev = true)
+        end 
+    else
+        error("`direction` must be \"forward\" or \"backward\".")
+    end
+    # Batch time steps
+    timesteps = collect(timesteps)
+    timesteps_by_batch = split_indices(timesteps, nb)
+
+    #### Define filter
+    # Particles
+    xpast = deepcopy(xinit)
+    xnow  = deepcopy(xinit)
+    xout  = Matrix{eltype(xinit)}(undef, nr, length(timesteps_by_batch[1])) 
+    # (log) weights
+    lw = zeros(np)
+    # Output ESS vector
+    ess = fill(NaN, nt)
+    # Output maxlp vector
+    maxlp = fill(NaN, nt)
+
+    #### Run filter
+    for b in 1:nb
+
+        # Define output particles object
+        xout = Matrix{eltype(xinit)}(undef, nr, length(timesteps_by_batch[b]))
+
+        # Define time steps and indicies for iteration 
+        timesteps_for_batch = timesteps_by_batch[b]
+        indices_for_batch   = collect(1:length(timesteps_for_batch))
+        if direction == "backward"
+            indices_for_batch = reverse(indices_for_batch)
+        end 
+
+        # Run filter
+        @showprogress desc = "Running filter..." for (i, t) in zip(indices_for_batch, timesteps_for_batch)
+
+            # println(t)
+
+            #### Move particles & compute weights
+            # * We iterate once over particles b/c this is thread safe
+            timestamp            = timeline[t]
+            has_obs_at_timestamp = haskey(yobs, timestamp)
+            @threads for j in 1:np
+                if isfinite(lw[j])
+                    # Move particles
+                    if t != start
+                        xnow[j], lwi = simulate_move(xpast[j], model_move, t, n_move)
+                        lw[j] += lwi
+                    end
+                    # Evaluate likelihoods
+                    if has_obs_at_timestamp && isfinite(lw[j])
+                        for (obs, model) in yobs[timestamp]
+                            lw[j] += logpdf_obs(xnow[j], model, t, obs)
+                        end
+                    end
+                end
+            end
+
+            #### Record diagnostics
+            maxlp[t] = maximum(lw)
+
+            #### Validate weights
+            if !any(isfinite.(lw))
+                # stop = ifelse(direction == "forward", t - 1, t + 1)
+                stop = t
+                pos  = sort([start, stop])
+                pos  = pos[1]:pos[2]
+                julia_warning("Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf.")
+                if do_batch
+                    if direction == "forward"
+                        @save batch[b] xfwd = xout
+                    else
+                        @save batch[b] xbwd = xout
+                    end 
+                    xout = nothing
+                end 
+                return (states = xout, ess = ess, maxlp = maxlp, convergence = false)
+            end
+
+            #### Resample particles
+            # Normalise weights
+            lw_norm = lw .- logsumexp(lw)
+            # Evaluate ESS
+            ess[t] = exp(-logsumexp(2 * lw_norm))
+            # Compute resampling indices
+            idx = resample(exp.(lw_norm), np)
+            # Record (subset) of resampled particles
+            # (A deep copy is implicitly made here via the subsetting)
+            xout[:, i] .= xnow[idx[1:nr]]
+            # Optionally resample particles for next iteration
+            do_resample = (do_t_resample && (t in t_resample)) || (ess[t] <= n_resample)
+            if do_resample
+                xpast .= xnow[idx]
+                lw .= zero(Float64)
+            else 
+                xpast .= xnow
+            end
+
+        end
+
+        # Write outputs to batch for file
+        if do_batch
+            if direction == "forward"
+                @save batch[b] xfwd = xout
+            else
+                @save batch[b] xbwd = xout
+            end 
+            xout = nothing
+        end 
+
+    end 
+
+    return (states = xout, ess = ess, maxlp = maxlp, convergence = true)
+
+
+end
+
+"""
+    particle_filter(; timeline::Vector{DateTime},
+                      xinit::Vector{<:State},
+                      yobs::Dict,
+                      model_move::ModelMove,
+                      n_move::Int = 100_000,
+                      n_record::Int = 1000,
+                      n_resample::Float64 = Float64(n_record),
+                      t_resample::Union{Nothing, Int, Vector{Int}},
+                      n_iter::Int64 = 1,
+                      direction::String = "forward", 
+                      batch::Union{Nothing, Vector{String}} = nothing)
+
+A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1:t`.
 
 # Arguments (keywords)
 
@@ -152,9 +335,11 @@ A particle filtering algorithm that samples from `f(X_t | {Y_1 ... Y_t}) for t �
     - Particles are resampled when the effective sample size <= `n_resample`;
 - `t_resample`: `nothing`, an `integer` or a Vector of `integer`s that define the time step(s) at which to force resampling;
     - Particles are resampled at `t_resample` regardless of the effective sample size;
+- `n_iter`: A integer that defines the maximum number of iterations (trials);
 - `direction:` A `String` that defines the direction of the filter:
     - `"forward"` runs the filter forwards in time;
     - `"backward"` runs the filter backwards in time;
+- (optional) `batch`: A Vector of `.jld2` file paths for particles (see Memory Management);
 
 # Algorithm
 
@@ -180,6 +365,14 @@ The algorithm continues in this way, iterating over the `timeline`, simulating, 
 
 The iteration over particles (i.e., simulated movements and likelihood evaluations) are multi-threaded.
 
+## Memory management 
+
+By default, `n_record` particles at each time step are retained in memory. If `batch` is provided, the `timeline` is split into `length(batch)` batches. The filter still moves along the whole `timeline`, but only records the particles for the current batch in memory. At the end of each batch, the particles for that batch are written to file. This reduces total memory demand. 
+
+`batch` file paths are sorted alphanumerically if `direction = "forward"` and in reverse order if `direction = "backward"`. For example: 
+* If you have a `timeline` of 10 time steps, `direction = "forward"` and `batch = ["fwd-1.jld2", "fwd-2.jld2", "fwd-3.jld2"]`, `fwd-1.jld2`, `fwd-2.jld2` and `fwd-3.jld2` contain the particle matrices for time steps `[1, 2, 3]`, `[4, 5, 6]` and [`7, 8, 9, 10`], respectively. 
+* If you have a `timeline` of 10 time steps, `direction = "backward"` and `batch = ["bwd-1.jld2", "bwd-2.jld2", "bwd-3.jld2"]`, `bwd-1.jld2`, `bwd-2.jld2` and `bwd-3.jld2` similarly contain the particle matrices for time steps `[1, 2, 3]`, `[4, 5, 6]` and [`7, 8, 9, 10`], respectively. 
+
 ## Convergence and diagnostics
 
 Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a time step at which there are no valid locations into which the algorithm can step. This may be due to data errors, incorrect assumptions, insufficient sampling effort or poor tuning-parameter settings.
@@ -194,162 +387,12 @@ Algorithm convergence is not guaranteed. The algorithm may reach a dead-end---a 
 - [`simulate_yobs()`](@ref) and [`assemble_yobs()`](@ref) to prepare observations for the particle filter;
 * [`Patter.simulate_step()`](@ref) and [`Patter.simulate_move()`](@ref) for the internal routines used to simulate new [`State`](@ref)s;
 * `Patter.logpdf_obs()` methods to evaluate the log probability of observations;
-* [`two_filter_smoother()`](@ref) to implement particle smoothing;
+* [`particle_smoother_two_filter()`](@ref) to implement particle smoothing;
 
 """
 function particle_filter(
     ; timeline::Vector{DateTime},
-    xinit::Vector,
-    yobs::Dict,
-    model_move::ModelMove,
-    n_move::Int = 100_000,
-    n_record::Int = 1000,
-    n_resample::Float64 = Float64(n_record),
-    t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
-    direction::String = "forward")
-
-    #### Define essential parameters
-    # Call start
-    call_start = now()
-    # Number of time steps
-    nt = length(timeline)
-    # Number of particles
-    np = length(xinit)
-    # Number of recorded particles
-    nr = n_record
-    # Use t_resample
-    do_t_resample = !isnothing(t_resample)
-
-    #### Check user inputs
-    # Check time line
-    timeline = sort(timeline)
-    check_timeline(timeline, collect(keys(yobs)))
-    # Check particle numbers
-    if nr > np
-        error("The number of initial particles in `xinit` ($np) must be >= the number of recorded partices in `n_record` ($nr).")
-    end
-
-    #### Define filter direction
-    if direction == "forward"
-        start = 1; finish = nt;
-        timesteps = start:finish
-    elseif direction == "backward"
-        start = nt; finish = 1;
-        timesteps = start:-1:finish
-    else
-        error("`direction` must be \"forward\" or \"backward\".")
-    end
-
-    #### Define particle objects
-    # Particles
-    xpast = deepcopy(xinit)
-    xnow  = deepcopy(xinit)
-    xout  = Matrix{eltype(xinit)}(undef, nr, nt);
-    # (log) weights
-    lw = zeros(np)
-    # Output particles
-    xout = Matrix{eltype(xinit)}(undef, nr, nt);
-
-    #### Define diagnostic objects
-    # Output ESS vector
-    ess = zeros(nt)
-    # Output maxlp vector
-    maxlp = zeros(nt)
-
-    #### Run filter
-    @showprogress desc = "Running filter..." for t in timesteps
-
-        # println(t)
-
-        #### Move particles & compute weights
-        # * We iterate once over particles b/c this is thread safe
-        timestamp            = timeline[t]
-        has_obs_at_timestamp = haskey(yobs, timestamp)
-        @threads for i in 1:np
-            if isfinite(lw[i])
-                # Move particles
-                if t != start
-                    xnow[i], lwi = simulate_move(xpast[i], model_move, t, n_move)
-                    lw[i] += lwi
-                end
-                # Evaluate likelihoods
-                if has_obs_at_timestamp && isfinite(lw[i])
-                    for (obs, model) in yobs[timestamp]
-                        lw[i] += logpdf_obs(xnow[i], model, t, obs)
-                    end
-                end
-            end
-        end
-
-        #### Record diagnostics
-        maxlp[t] = maximum(lw)
-
-        #### Validate weights
-        if !any(isfinite.(lw))
-            # stop = ifelse(direction == "forward", t - 1, t + 1)
-            stop = t
-            pos  = sort([start, stop])
-            pos  = pos[1]:pos[2]
-            julia_warning("Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf.")
-            return particulate("filter: " * direction, call_start, 
-                               timeline[pos], xout[:, pos], ess[pos], maxlp[pos], 
-                               np, 1, false)
-         end
-
-        #### Resample particles
-        # Normalise weights
-        lw_norm = lw .- logsumexp(lw)
-        # Evaluate ESS
-        ess[t] = exp(-logsumexp(2 * lw_norm))
-        # Compute resampling indices
-        idx = resample(exp.(lw_norm), np)
-        # Record (subset) of resampled particles
-        # (A deep copy is implicitly made here via the subsetting)
-        xout[:, t] .= xnow[idx[1:nr]]
-        # Optionally resample particles for next iteration
-        do_resample = (do_t_resample && (t in t_resample)) || (ess[t] <= n_resample)
-        if do_resample
-            xpast .= xnow[idx]
-            lw .= zero(Float64)
-        else 
-            xpast .= xnow
-        end
-
-    end
-
-    return particulate("filter: " * direction, call_start, 
-                       timeline, xout, ess, maxlp, 
-                       np, 1, true)
-
-end
-
-
-"""
-# Iterative particle filter
-
-An interative implementation of the particle filter.
-
-# Arguments (keywords)
-
-- `...`: Keyword arguments passed to [`particle_filter`](@ref);
-- `n_iter`: A integer that defines the maximum number of iterations (trials);
-
-# Details
-
-This function wraps [`particle_filter`](@ref). The filter is implemented up to `n_iter` times, or until convergence is achieved.
-
-# Returns 
-
-- A [`Particles`](@ref) structure;
-
-# See also
-
-* [`particle_filter`](@ref) implements the particle filter;
-
-"""
-function particle_filter_iter(
-    ; timeline::Vector{DateTime},
-    xinit::Vector,
+    xinit::Vector{<:State},
     yobs::Dict,
     model_move::ModelMove,
     n_move::Int = 100_000,
@@ -357,7 +400,8 @@ function particle_filter_iter(
     n_resample::Float64 = Float64(n_record),
     t_resample::Union{Nothing, Int, Vector{Int}},
     n_iter::Int64 = 1,
-    direction::String = "forward")
+    direction::String = "forward", 
+    batch::Union{Nothing, Vector{String}} = nothing)
 
     # Run filter iteratively 
     call_start = now()
@@ -366,24 +410,23 @@ function particle_filter_iter(
     out        = nothing
     while iter < n_iter
         iter = iter + 1
-        out  = particle_filter(timeline   = timeline,
-                               xinit      = xinit,
-                               yobs       = yobs,
-                               model_move = model_move,
-                               n_move     = n_move,
-                               n_record   = n_record,
-                               n_resample = n_resample,
-                               t_resample = t_resample,
-                               direction  = direction)
-        if out.callstats.convergence[1]
+        out  = _particle_filter(timeline   = timeline,
+                                xinit      = xinit,
+                                yobs       = yobs,
+                                model_move = model_move,
+                                n_move     = n_move,
+                                n_record   = n_record,
+                                n_resample = n_resample,
+                                t_resample = t_resample,
+                                direction  = direction, 
+                                batch      = batch)
+        if out.convergence[1]
             break
         end 
     end
-    
-    # Define outputs
-    out.callstats.timestamp .= call_start
-    out.callstats.n_iter    .= iter
-    out.callstats.time      .= call_duration(call_start)
-    return out
+
+    return particulate("filter: " * direction, call_start, 
+                       timeline, out.states, out.ess, out.maxlp, 
+                       length(xinit), iter, out.convergence)
 
 end

@@ -49,7 +49,7 @@ To use a new `State` sub-type in the simulation of animal movements (via [`simul
 -   Define a corresponding [`ModelMove`](@ref) sub-type;
 -   (optional) Define `Patter.map_init()` and `Patter.states_init()` methods for [`simulate_states_init()`](@ref) to simulate initial states;
 -   Define a [`Patter.simulate_step()`](@ref) method (for [`Patter.simulate_move()`](@ref)) to update the state using a [`ModelMove`](@ref) instance (in [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref));
--   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`two_filter_smoother()`](@ref));
+-   Define a [`Patter.logpdf_step()`](@ref) method (for [`Patter.logpdf_move()`](@ref)) to evaluate the probability density of movement from one state to another (in [`particle_smoother_two_filter()`](@ref));
 
 """
 abstract type State end 

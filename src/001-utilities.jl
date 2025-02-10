@@ -70,3 +70,15 @@ function check_timeline(t_sim::Vector{Dates.DateTime}, t_obs::Vector)
     check_timeline_spacing(t_sim)
     nothing
 end
+
+#########################
+#########################
+#### Batching
+
+# Define a Vector of indices for each chunk
+# * This function is inspired by parallel::splitIndices() in R
+function split_indices(indices::Vector{Int}, n_chunk::Int)
+    div, rem = divrem(length(indices), n_chunk)
+    splits = [indices[(i-1)*div + min(i-1, rem) + 1 : i*div + min(i, rem)] for i in 1:n_chunk]
+    return splits
+end 
