@@ -307,7 +307,7 @@ end
                       n_move::Int = 100_000,
                       n_record::Int = 1000,
                       n_resample::Float64 = Float64(n_record),
-                      t_resample::Union{Nothing, Int, Vector{Int}},
+                      t_resample::Union{Nothing, Int, Vector{Int}}  = nothing,
                       n_iter::Int64 = 1,
                       direction::String = "forward", 
                       batch::Union{Nothing, Vector{String}} = nothing)
@@ -398,7 +398,7 @@ function particle_filter(
     n_move::Int = 100_000,
     n_record::Int = 1000,
     n_resample::Float64 = Float64(n_record),
-    t_resample::Union{Nothing, Int, Vector{Int}},
+    t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
     n_iter::Int64 = 1,
     direction::String = "forward", 
     batch::Union{Nothing, Vector{String}} = nothing)
