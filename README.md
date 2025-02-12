@@ -31,17 +31,17 @@ Scheidegger](https://www.eawag.ch/de/ueber-uns/portraet/organisation/mitarbeiten
 patterns of space use from animal tracking data. A powerful, flexible,
 process-orientated, particle-based framework is used for this purpose.
 The essential functions are `particle_filter()` and
-`two_filter_smoother()`:
+`particle_smoother_two_filter()`:
 
 - **`particle_filter()`** is the particle filter. This simulates the
   possible locations of an individual moving forwards in time,
   accounting for all of the data (for example, acoustic observations,
   depth observations and any other observations) *up to* each time point
   and the animal’s movement (a partial marginal distribution).
-- **`two_filter_smoother()`** is a particle smoothing algorithm. At each
-  time step, the smoother accounts for all of the data from both the
-  past *and* the future (the full marginal distribution) and
-  substantially refines maps of space use.
+- **`particle_smoother_two_filter()`** is a particle smoothing
+  algorithm. At each time step, the smoother accounts for all of the
+  data from both the past *and* the future (the full marginal
+  distribution) and substantially refines maps of space use.
 
 We hope to add backward sampling algorithms to the package in due
 course.
@@ -115,7 +115,7 @@ To implement the particle filter, use:
 
 To implement the two-filter smoother, use:
 
-- `two_filter_smoother()` to run the smoother;
+- `particle_smoother_two_filter()` to run the smoother;
 
 # Usage
 
@@ -170,7 +170,7 @@ movements:
 # * `env_init` is a Raster that is used for sampling initial states (locations)
 # * `env` is a GeoArray that is used by the algorithms (faster)
 env_init = Patter.rast(joinpath("data", "bathymetry.tif"));
-env = GeoArrays.read(joinpath("data", "bathymetry.tif"));
+env      = GeoArrays.read(joinpath("data", "bathymetry.tif"));
 
 # Define a timeline for the analysis
 # * This specifies the time period and resolution of the analysis
@@ -306,10 +306,10 @@ observation models in a typed dictionary for analysis:
 
 ``` julia
 # Process time stamps
-acoustics.timestamp = DateTime.(acoustics.timestamp, "yyyy-mm-dd HH:MM:SS");
+acoustics.timestamp      = DateTime.(acoustics.timestamp, "yyyy-mm-dd HH:MM:SS");
 containers_fwd.timestamp = DateTime.(containers_fwd.timestamp, "yyyy-mm-dd HH:MM:SS");
 containers_bwd.timestamp = DateTime.(containers_bwd.timestamp, "yyyy-mm-dd HH:MM:SS");
-archival.timestamp = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
+archival.timestamp       = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
 
 # Collate datasets & associated `ModelObs` instances into a typed dictionary 
 # * Acoustic containers are direction specific, so two datasets are required
@@ -410,44 +410,44 @@ time step:
 
 ``` julia
 # Simulate initial states for the forward filter
-xinit = simulate_states_init(map = env_init, 
-                             timeline = timeline, 
-                             state_type = StateXY,
-                             xinit = nothing, 
-                             model_move = model_move, 
-                             datasets = datasets_fwd,
+xinit = simulate_states_init(map             = env_init, 
+                             timeline        = timeline, 
+                             state_type      = StateXY,
+                             xinit           = nothing, 
+                             model_move      = model_move, 
+                             datasets        = datasets_fwd,
                              model_obs_types = model_obs_types,
-                             n_particle = 20_000, 
-                             direction = "forward", 
-                             output = "Vector");
+                             n_particle      = 20_000, 
+                             direction       = "forward", 
+                             output          = "Vector");
 
 # Run the forward filter
-fwd = particle_filter(timeline = timeline,
-                      xinit = xinit,
-                      yobs = yobs_fwd,
+fwd = particle_filter(timeline   = timeline,
+                      xinit      = xinit,
+                      yobs       = yobs_fwd,
                       model_move = model_move,
-                      n_record = 1000,
-                      direction = "forward");
+                      n_record   = 1000,
+                      direction  = "forward");
 
 # Simulate initial states for the backward filter
-xinit = simulate_states_init(map = env_init, 
-                             timeline = timeline, 
-                             state_type = StateXY,
-                             xinit = nothing, 
-                             model_move = model_move, 
-                             datasets = datasets_bwd,
+xinit = simulate_states_init(map             = env_init, 
+                             timeline        = timeline, 
+                             state_type      = StateXY,
+                             xinit           = nothing, 
+                             model_move      = model_move, 
+                             datasets        = datasets_bwd,
                              model_obs_types = model_obs_types,
-                             n_particle = 20_000, 
-                             direction = "backward", 
-                             output = "Vector");
+                             n_particle      = 20_000, 
+                             direction       = "backward", 
+                             output          = "Vector");
 
 # Run the backward filter
-bwd = particle_filter(timeline = timeline,
-                      xinit = xinit,
-                      yobs = yobs_bwd,
+bwd = particle_filter(timeline   = timeline,
+                      xinit      = xinit,
+                      yobs       = yobs_bwd,
                       model_move = model_move,
-                      n_record = 1000,
-                      direction = "backward");
+                      n_record   = 1000,
+                      direction  = "backward");
 ```
 
 The filter returns a `NamedTuple` that defines the time steps of the
@@ -468,11 +468,11 @@ and after each step):
 ``` julia
 # (optional) Set vmap to improve speed here
 n_particle = 750;
-smo = two_filter_smoother(timeline = timeline,
-                          xfwd = fwd.states[1:n_particle, :],
-                          xbwd = bwd.states[1:n_particle, :],
-                          model_move = model_move,
-                          n_sim = 100);
+smo = particle_smoother_two_filter(timeline   = timeline,
+                                   xfwd       = fwd.states[1:n_particle, :],
+                                   xbwd       = bwd.states[1:n_particle, :],
+                                   model_move = model_move,
+                                   n_sim      = 100);
 ```
 
 # Mapping
@@ -497,9 +497,9 @@ map <- terra::rast(file.path("data", "bathymetry.tif"))
 smo <- patter:::pf_particles(.pf_obj = "smo")
 
 # Estimate UD
-ud <- map_dens(.map = map,
-               .coord = smo$states,
-               .sigma = bw.h, 
+ud <- map_dens(.map     = map,
+               .coord   = smo$states,
+               .sigma   = bw.h, 
                .verbose = FALSE)$ud
 
 # Add home range
