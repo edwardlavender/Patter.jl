@@ -67,7 +67,7 @@ end
 # Read a single-layer raster for Patter.jl
 function rast(x::String)
     # Read Raster
-    x = Rasters.Raster(x, replace_missing = true)
+    x = Rasters.Raster(x)
     # Centre coordinates to avoid floating point issues
     return spatCentre(x = x)
 end 
