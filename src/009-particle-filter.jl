@@ -258,7 +258,7 @@ function _particle_filter(
                     end 
                     xout = nothing
                 end 
-                return (states = xout, ess = ess, maxlp = maxlp, convergence = false)
+                return (timeline = timeline[pos], states = xout[:, pos], ess = ess[pos], maxlp = maxlp[pos], convergence = false)
             end
 
             #### Resample particles
@@ -294,7 +294,7 @@ function _particle_filter(
 
     end 
 
-    return (states = xout, ess = ess, maxlp = maxlp, convergence = true)
+    return (timeline = timeline, states = xout, ess = ess, maxlp = maxlp, convergence = true)
 
 
 end
@@ -426,7 +426,7 @@ function particle_filter(
     end
 
     return particulate("filter: " * direction, call_start, 
-                       timeline, out.states, out.ess, out.maxlp, 
+                       out.timeline, out.states, out.ess, out.maxlp, 
                        length(xinit), iter, out.convergence)
 
 end
