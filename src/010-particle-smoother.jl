@@ -165,6 +165,7 @@ end
                                    model_move::ModelMove, 
                                    vmap::Union{GeoArray, Nothing} = nothing, 
                                    n_sim::Int = 100, 
+                                   n_particle::Union{Nothing, Int} = nothing,
                                    cache::Bool = true, 
                                    batch::Union{Nothing, Vector{String}} = nothing)
 
@@ -179,6 +180,7 @@ A two-filter particle smoother that samples from `f(s_t | y_{1:T})` for `t ∈ 1
 - `model_move`: A [`ModelMove`](@ref) instance;
 - `vmap`: (optional) A `GeoArray` that defines the 'validity map' (see [`Patter.logpdf_move()`](@ref));
 - `n_sim`: An integer that defines the number of Monte Carlo simulations (see [`Patter.logpdf_move()`](@ref));
+- (optional) `n_particle`: An integer that defines the number of particles for smoothing. If `nothing`, all particles are used;
 - `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`Patter.logpdf_move()`](@ref));
 - (optional) `batch`: A `Vector` of `.jld2` file paths for particles (see [`particle_filter()`](@ref));
 
@@ -261,11 +263,6 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
             xfwd = xfwd[1:n_particle, :]
             xbwd = xbwd[1:n_particle, :]
         end 
-
-        println(xfwd_batch[b])
-        println(xbwd_batch[b])
-        println(size(xfwd))
-        println(size(xbwd))
 
         # Define indicies for batch
         timesteps = timesteps_by_batch[b]
