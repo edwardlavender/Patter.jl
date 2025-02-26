@@ -253,7 +253,9 @@ function _particle_filter(
                 stop = t
                 pos  = sort([start, stop])
                 pos  = pos[1]:pos[2]
-                julia_warning("Weights from filter ($start -> $finish) are zero at time $t): returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf.")
+                ind  = sort(indices_for_batch[findall(in(pos), timesteps_for_batch)])
+                xout = xout[:, ind]
+                julia_warning("Weights from filter ($start -> $finish) are zero at time $t: returning outputs from $(minimum(pos)):$(maximum(pos)). Note that all (log) weights at $t are -Inf.")
                 if do_batch
                     if direction == "forward"
                         @save batch[b] xfwd = xout
@@ -262,7 +264,7 @@ function _particle_filter(
                     end 
                     xout = nothing
                 end 
-                return (timeline = timeline[pos], states = xout[:, pos], ess = ess[pos], maxlp = maxlp[pos], convergence = false)
+                return (timeline = timeline[pos], states = xout, ess = ess[pos], maxlp = maxlp[pos], convergence = false)
             end
 
             #### Resample particles
