@@ -204,6 +204,7 @@ Fearnhead, P., Wyncoll, D., Tawn, J., [2010](https://doi.org/10.1093/biomet/asq0
 function particle_smoother_two_filter(; timeline::Vector{DateTime}, 
                                         xfwd::Union{Matrix{<:State}, Vector{String}}, xbwd::Union{Matrix{<:State}, Vector{String}}, model_move::ModelMove, 
                                         vmap::Union{GeoArray, Nothing} = nothing, 
+                                        n_particle::Union{Nothing, Int} = nothing,
                                         n_sim::Int = 100, 
                                         cache::Bool = true, 
                                         batch::Union{Nothing, Vector{String}} = nothing)
@@ -254,6 +255,17 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
             @load xfwd_batch[b] xfwd
             @load xbwd_batch[b] xbwd
         end 
+
+        # (optional) Select particles 
+        if !isnothing(n_particle)
+            xfwd = xfwd[1:n_particle, :]
+            xbwd = xbwd[1:n_particle, :]
+        end 
+
+        println(xfwd_batch[b])
+        println(xbwd_batch[b])
+        println(size(xfwd))
+        println(size(xbwd))
 
         # Define indicies for batch
         timesteps = timesteps_by_batch[b]

@@ -171,24 +171,28 @@ function _particle_filter(
     nb       = do_batch ? length(batch) : 1
 
     #### Define filter direction
+    start = 1; finish = nt
+    timesteps          = collect(start:finish)
+    timesteps_by_batch = split_indices(timesteps, nb)
     if direction == "forward"
-        start = 1; finish = nt;
-        timesteps = start:finish
         if do_batch
             batch = sort(batch)
         end 
     elseif direction == "backward"
+        # a) Update timesteps_by_batch
+        # * Use split_indices output as above
+        # * Reverse the vector & Vector elements
+        # * (This is necessary to guarantee correct alignment)
+        timesteps_by_batch = reverse(reverse.(timesteps_by_batch))
+        # b) Next, reverse timesteps 
         start = nt; finish = 1;
-        timesteps = start:-1:finish
+        timesteps = collect(start:-1:finish)
         if do_batch
             batch = sort(batch, rev = true)
         end 
     else
         error("`direction` must be \"forward\" or \"backward\".")
     end
-    # Batch time steps
-    timesteps = collect(timesteps)
-    timesteps_by_batch = split_indices(timesteps, nb)
 
     #### Define filter
     # Particles
