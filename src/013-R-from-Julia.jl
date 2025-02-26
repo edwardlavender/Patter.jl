@@ -72,10 +72,15 @@ end
 
 
 # Get a DataFrame of States
-function r_get_states(states::Matrix{<:State}, 
+function r_get_states(states::Union{Nothing, Matrix{<:State}}, 
                       timesteps::Vector{Int},
                       timestamps::Vector{Dates.DateTime})
-    # Initialise empty matrix
+
+    # Handle batching
+    if isnothing(states)
+        return nothing 
+    end
+    # Otherwise, initialise empty matrix
     if (length(timesteps) != length(timestamps))
         error("`length(timesteps)` and `length(timestamps)` should be identical.")
     end 
