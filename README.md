@@ -262,7 +262,7 @@ first(acoustics, 6)
 containers_fwd = CSV.read(joinpath("data", "containers-fwd.csv"), DataFrame);
 first(containers_fwd, 6)
 #> 6×6 DataFrame
-#>  Row │ timestamp            obs    sensor_id  receiver_x  receiver_y  radius
+#>  Row │ timestamp            obs    sensor_id  centroid_x  centroid_y  radius
 #>      │ String31             Int64  Int64      Float64     Float64     Int64
 #> ─────┼───────────────────────────────────────────────────────────────────────
 #>    1 │ 2016-03-17 01:50:00      1         26   7.09242e5   6.25311e6    1500
@@ -274,7 +274,7 @@ first(containers_fwd, 6)
 containers_bwd = CSV.read(joinpath("data", "containers-bwd.csv"), DataFrame);
 first(containers_bwd, 6)
 #> 6×6 DataFrame
-#>  Row │ timestamp            obs    sensor_id  receiver_x  receiver_y  radius
+#>  Row │ timestamp            obs    sensor_id  centroid_x  centroid_y  radius
 #>      │ String31             Int64  Int64      Float64     Float64     Float64
 #> ─────┼────────────────────────────────────────────────────────────────────────
 #>    1 │ 2016-03-17 01:52:00      1         26   7.09242e5   6.25311e6   1500.0
@@ -317,7 +317,7 @@ archival.timestamp       = DateTime.(archival.timestamp, "yyyy-mm-dd HH:MM:SS");
 datasets_fwd        = [acoustics, containers_fwd, archival];
 datasets_bwd        = [acoustics, containers_bwd, archival];
 model_obs_types     = [ModelObsAcousticLogisTrunc, 
-                       ModelObsAcousticContainer, 
+                       ModelObsContainer, 
                        ModelObsDepthNormalTruncSeabed];
 yobs_fwd            = assemble_yobs(datasets = datasets_fwd,
                                     model_obs_types = model_obs_types);
@@ -440,14 +440,14 @@ fwd.callstats
 #>  Row │ timestamp                routine          n_particle  n_iter  convergen ⋯
 #>      │ DateTime                 String           Int64       Int64   Bool      ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-12T22:58:58.530  filter: forward       10000       1         tr ⋯
+#>    1 │ 2025-02-27T15:15:27.256  filter: forward       10000       1         tr ⋯
 #>                                                                2 columns omitted
 fwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 fwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.217
+#>  1.067
 
 # Backward run outputs
 bwd.states
@@ -499,14 +499,14 @@ bwd.callstats
 #>  Row │ timestamp                routine           n_particle  n_iter  converge ⋯
 #>      │ DateTime                 String            Int64       Int64   Bool     ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-12T22:58:59.902  filter: backward       10000       1         t ⋯
+#>    1 │ 2025-02-27T15:15:28.482  filter: backward       10000       1         t ⋯
 #>                                                                2 columns omitted
 bwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 bwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  0.854
+#>  0.875
 ```
 
 ## Particle smoother
@@ -577,14 +577,14 @@ smo.callstats
 #>  Row │ timestamp                routine               n_particle  n_iter   con ⋯
 #>      │ DateTime                 String                Int64       Float64  Boo ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-12T22:59:01.804  smoother: two-filter         750      NaN      ⋯
+#>    1 │ 2025-02-27T15:15:30.397  smoother: two-filter         750      NaN      ⋯
 #>                                                                2 columns omitted
 smo.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 smo.callstats.time
 #> 1-element Vector{Float64}:
-#>  101.411
+#>  102.925
 ```
 
 # Mapping
