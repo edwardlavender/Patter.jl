@@ -2,11 +2,12 @@ using Distributions
 using LogExpFunctions: logistic, log1pexp
 
 export ModelObs
-export ModelObsAcousticLogisTrunc, ModelObsAcousticContainer
+export ModelObsAcousticLogisTrunc
 export ModelObsDepthUniformSeabed, ModelObsDepthNormalTruncSeabed
-
+export ModelObsContainer
 
 """
+
     Observation models
 
 # `ModelObs`
@@ -47,15 +48,6 @@ To simulate an acoustic observation (``y^{(A)}_{t, k} \\in {0, 1}``) from this m
 y^{(A)}_{t, k} | \\textit{\\textbf{s}}_t \\sim \\text{Bernoulli}(p_{k,t}(\\textit{\\textbf{s}}_t))
 ```
 via `Patter.simulate_obs()`.
-
-## `ModelObsAcousticContainer`
-
-`ModelObsAcousticContainer` is a `ModelObs` structure for an acoustic container. Acoustic containers define the maximum possible distance of an individual from a receiver that recorded the next detection. This contains the following fields:
-- `sensor_id`: An integer that defines the sensor (receiver) ID for the receiver that recorded the next detection;
-- `receiver_x`, `receiver_y`: Floats that define the x and y coordinates of the receiver;
-- `radius`: A Float that defines the radius of the acoustic container; 
-
-Acoustic containers are a computational device used to facilitate convergence in the particle filter. At each time step, particles are permitted or killed depending on whether or not the distance between a particle and the receiver(s) that recorded the next detection(s) is ≤ `radius`.
 
 ## `ModelObsDepthUniformSeabed`
 
@@ -100,6 +92,15 @@ f(y_t^{(D)} | \\textit{\\textbf{s}}_t) = \\text{TruncatedNormal}(b(\\textit{\\te
 ```
 
 We can simulate observations from this model as for previous models via `Patter.simulate_obs()`.
+
+## `ModelObsContainer`
+
+`ModelObsContainer` is a `ModelObs` structure for a container. Containers define the maximum possible distance of an individual from a location (e.g., receiver) that recorded a future observation. This contains the following fields:
+- `sensor_id`: An integer that defines the sensor (receiver) ID for the receiver that recorded the next detection;
+- `centroid_x`, `centroid_y`: Floats that define the x and y coordinates of the container's centroid;
+- `radius`: A Float that defines the radius of the container; 
+
+Containers are a computational device used to facilitate convergence in the particle filter. At each time step, particles are permitted or killed depending on whether or not the distance between a particle and the locations(s) that recorded the next observation(s) is ≤ `radius`.
 
 # Custom sub-types
 
@@ -210,53 +211,6 @@ end
 
 #########################
 #########################
-#### Acoustic containers
-
-struct ModelObsAcousticContainer <: ModelObs
-    sensor_id::Int64
-    receiver_x::Float64
-    receiver_y::Float64
-    radius::Float64
-end
-
-# A simulate_obs() method is not currently provided for ModelObsAcousticContainer
-# * Acoustic containers are calculated post-hoc from acoustic observations
-# function simulate_obs(state::State, model_obs::ModelObsAcousticContainer, t::Int64)
-# 
-# end
-
-function logpdf_obs(state::State, model::ModelObsAcousticContainer, t::Int64, obs::Int64)
-    # Calculate distance between particle (state) and receiver
-    dist = distance(state.x, state.y, model.receiver_x, model.receiver_y)
-    # Only particles within model.radius are permitted
-    # * radius is a pre-calculated field in model
-    # * (radius = receiver_gamma + (receiver_timestep - t) * mobility)
-    # * Note that we should technically normalise densities over the area spanned by the container
-    # * In practice, we don't need to do this b/c we adjust all valid particles by the same constant
-    # * And we normalise the weights in the particle filter, so this cancels out 
-    return ifelse(dist <= model.radius, 0.0, -Inf)
-end
-
-
-#########################
-#########################
-#### Capture containers
-
-# struct ModelObsCaptureContainer <: ModelObs
-#     sensor_id::Int64
-#     capture_x::Float64
-#     capture_y::Float64
-#     radius::Float64
-# end
-
-# function logpdf_obs(state::State, model::ModelObsCaptureContainer, t::Int64, obs::Int64)
-#     dist = distance(state.x, state.y, model.capture_x, model.capture_y)
-#     return ifelse(dist <= model.radius, 0.0, -Inf)
-# end
-
-
-#########################
-#########################
 #### Uniform depth model 
 
 struct ModelObsDepthUniformSeabed <: ModelObs
@@ -318,3 +272,32 @@ function logpdf_obs(state::State, model_obs::ModelObsDepthNormalTruncSeabed, t::
                       0.0, state.map_value + model_obs.depth_deep_eps)
     logpdf(dbn, obs)
 end 
+
+#########################
+#########################
+#### Containers
+
+struct ModelObsContainer <: ModelObs
+    sensor_id::Int64
+    centroid_x::Float64
+    centroid_y::Float64
+    radius::Float64
+end
+
+# A simulate_obs() method is not currently provided for ModelObsContainer
+# * Containers are calculated post-hoc
+# function simulate_obs(state::State, model_obs::ModelObsContainer, t::Int64)
+# 
+# end
+
+function logpdf_obs(state::State, model::ModelObsContainer, t::Int64, obs::Int64)
+    # Calculate distance between particle (state) and receiver
+    dist = distance(state.x, state.y, model.centroid_x, model.centroid_y)
+    # Only particles within model.radius are permitted
+    # * radius is a pre-calculated field in model
+    # * (For acoustics: radius = receiver_gamma + (receiver_timestep - t) * mobility)
+    # * Note that we should technically normalise densities over the area spanned by the container
+    # * In practice, we don't need to do this b/c we adjust all valid particles by the same constant
+    # * And we normalise the weights in the particle filter, so this cancels out 
+    return ifelse(dist <= model.radius, 0.0, -Inf)
+end
