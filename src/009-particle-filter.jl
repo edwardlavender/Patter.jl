@@ -345,6 +345,7 @@ A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1
     - All [`ModelMove`](@ref) sub-types contain a `map` field that defines the region(s) within which movements are allowed (see [`is_valid()`](@ref));
     - Each particle is moved up to `n_move` times, until a valid movement is simulated;
     - Particles that fail to generate a valid move are killed;
+    - `n_move = 1` is permitted, which corresponds to an 'unrestricted' movement model in which particles are instantly killed if they land in inhospitable habitats on `map`;
 - `n_record`: An integer that defines the number of particles to record at each time step:
     - `n_record` particles are resampled at each time step and recorded in memory;
 - `n_resample`: A number that defines the effective sample size for resampling:
