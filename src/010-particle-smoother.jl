@@ -102,7 +102,8 @@ function _particle_smoother_two_filter(; timesteps::Vector{Int},
                                          vmap::Union{GeoArray, Nothing} = nothing,
                                          n_sim::Int = 100,
                                          cache::Bool = true, 
-                                         progress = ())
+                                         progress = (),
+                                         verbose::Bool = true)
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
@@ -127,13 +128,15 @@ function _particle_smoother_two_filter(; timesteps::Vector{Int},
     #### Precomputations
     # Precompute normalisation constants if cache = true & n_sim > 0
     # * This is possible for movement models for which the density only depends on `xbwd` fields 
-    if cache & n_sim > 0
+    if cache & (n_sim > 0)
+        julia_info("Precomputing normalisation constants for batch ...", verbose)
         cache_norm_constants = logpdf_move_normalisations(xbwd, model_move, vmap, n_sim)
     else
         cache_norm_constants = nothing
     end
 
     #### Run smoothing for t = 2:(nt - 1), 1:nt or 2:(nt - 1):
+    julia_info("Smoothing ...", verbose)
     pb = Progress(length(indices); progress...)
     for t in indices
         
@@ -172,7 +175,8 @@ end
                                    n_particle::Union{Nothing, Int} = nothing,
                                    cache::Bool = true, 
                                    batch::Union{Nothing, Vector{String}} = nothing, 
-                                   progress = true)
+                                   progress = true, 
+                                   verbose::Bool = true)
 
 A two-filter particle smoother that samples from `f(s_t | y_{1:T})` for `t ∈ 1:T`.
 
@@ -189,6 +193,7 @@ A two-filter particle smoother that samples from `f(s_t | y_{1:T})` for `t ∈ 1
 - `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`Patter.logpdf_move()`](@ref));
 - (optional) `batch`: A `Vector` of `.jld2` file paths for particles (see [`particle_filter()`](@ref));
 - (optional) `progress`: A NamedTuple of arguments, passed to `ProgressMeter.Progress`, to control the progress bar. If enabled, one progress bar is shown for each batch;
+- `verbose`: A `Bool` that defines whether or not to print information to the console;
 
 # Details
 
@@ -216,7 +221,8 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
                                         n_sim::Int = 100, 
                                         cache::Bool = true, 
                                         batch::Union{Nothing, Vector{String}} = nothing, 
-                                        progress = ())
+                                        progress = (), 
+                                        verbose::Bool = true)
 
     #### Initialise
     call_start = now()
@@ -259,8 +265,11 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
     #### Run smoothing (over batches as required)
     for b in 1:nb
 
+        julia_info("Running smoother for batch $b / $nb ...", verbose)
+
         # Read batch if required
         if do_batch
+            julia_info("Reading particles from disk ...", verbose)
             @load xfwd_batch[b] xfwd
             @load xbwd_batch[b] xbwd
         end 
@@ -286,7 +295,8 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
                                              vmap       = vmap,
                                              n_sim      = n_sim,
                                              cache      = cache, 
-                                             progress   = progress)
+                                             progress   = progress, 
+                                             verbose    = verbose)
 
         # Update particles for t = 1 and t = T 
         if b == 1
@@ -303,6 +313,7 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
 
         # Record particles 
         if do_batch
+            julia_info("Writing smoothed particles to disk ...", verbose)
             # Record xfwd_init
             # The last locations for this batch are the locations at t - 1 on the next batch
             xfwd_init = xfwd[:, end]

@@ -7,13 +7,23 @@ using Dates
 #########################
 #### Console utilities
 
+# Julia info: display 
+# * This function displays info messages 
+# * In Patter.jl, we use julia_warning() rather than @warn because the former also forces display on Windows via JuliaCall
+function julia_info(msg::String, verbose::Bool = true)
+    if verbose
+        crayon = Crayon(foreground = :blue)
+        display(crayon("Message: " * msg))
+    end
+    return nothing
+end
+
 # Julia warnings: display
 # * This function returns 'warning' messages in red
-# * In Patter.jl, we use julia_warning() rather than @warn because the former also forces display on Windows 
 function julia_warning(msg::String)
     crayon = Crayon(foreground = :red)
     display(crayon("\nWarning: " * msg))
-    nothing
+    return nothing
 end 
 
 # julia_warning("This is a warning!")

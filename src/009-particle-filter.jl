@@ -146,7 +146,8 @@ function _particle_filter(
     t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
     direction::String = "forward", 
     batch::Union{Nothing, Vector{String}} = nothing, 
-    progress = ())
+    progress = (), 
+    verbose::Bool = true)
 
     #### Define essential parameters
     # Number of time steps
@@ -209,6 +210,8 @@ function _particle_filter(
 
     #### Run filter
     for b in 1:nb
+
+        julia_info("Running filter for batch $b / $nb ...", verbose)
 
         # Define output particles object
         xout = Matrix{eltype(xinit)}(undef, nr, length(timesteps_by_batch[b]))
@@ -294,6 +297,7 @@ function _particle_filter(
 
         # Write outputs to batch for file
         if do_batch
+            julia_info("Writing particles to disk ...", verbose)
             if direction == "forward"
                 @save batch[b] xfwd = xout
             else
@@ -321,7 +325,8 @@ end
                       n_iter::Int64 = 1,
                       direction::String = "forward", 
                       batch::Union{Nothing, Vector{String}} = nothing, 
-                      progress = ())
+                      progress = (), 
+                      verbose::Bool = true)
 
 A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1:t`.
 
@@ -352,6 +357,7 @@ A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1
     - `"backward"` runs the filter backwards in time;
 - (optional) `batch`: A Vector of `.jld2` file paths for particles (see Memory Management);
 - (optional) `progress`: A NamedTuple of arguments, passed to `ProgressMeter.Progress`, to control the progress bar. If enabled, one progress bar is shown for each batch;
+- `verbose`: A `Bool` that defines whether or not to print information to the console;
 
 # Algorithm
 
@@ -414,7 +420,8 @@ function particle_filter(
     n_iter::Int64 = 1,
     direction::String = "forward", 
     batch::Union{Nothing, Vector{String}} = nothing, 
-    progress = ())
+    progress = (), 
+    verbose::Bool = true)
 
     # Run filter iteratively 
     call_start = now()
@@ -423,6 +430,7 @@ function particle_filter(
     out        = nothing
     while iter < n_iter
         iter = iter + 1
+        julia_info("On iteration $iter ...", verbose)
         out  = _particle_filter(timeline   = timeline,
                                 xinit      = xinit,
                                 yobs       = yobs,
@@ -433,7 +441,8 @@ function particle_filter(
                                 t_resample = t_resample,
                                 direction  = direction, 
                                 batch      = batch, 
-                                progress   = progress)
+                                progress   = progress, 
+                                verbose    = verbose)
         if out.convergence[1]
             break
         end 
