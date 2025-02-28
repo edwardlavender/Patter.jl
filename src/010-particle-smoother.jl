@@ -1,6 +1,6 @@
 using Base.Threads: @threads
 using JLD2
-using ProgressMeter: @showprogress
+using ProgressMeter
 
 export particle_smoother_two_filter
 
@@ -101,7 +101,8 @@ function _particle_smoother_two_filter(; timesteps::Vector{Int},
                                          model_move::ModelMove, 
                                          vmap::Union{GeoArray, Nothing} = nothing,
                                          n_sim::Int = 100,
-                                         cache::Bool = true)
+                                         cache::Bool = true, 
+                                         progress = ())
 
     #### Check inputs
     size(xfwd) == size(xbwd) || error("Forward and backward sample do not match!")
@@ -133,7 +134,8 @@ function _particle_smoother_two_filter(; timesteps::Vector{Int},
     end
 
     #### Run smoothing for t = 2:(nt - 1), 1:nt or 2:(nt - 1):
-    @showprogress desc = "Running two-filter smoother..." for t in indices
+    pb = Progress(length(indices); progress...)
+    for t in indices
         
         # println(t)
 
@@ -151,6 +153,8 @@ function _particle_smoother_two_filter(; timesteps::Vector{Int},
         # Rsample particles & compute ESS using smoothed weights 
         xout[:, t], ess[t] = smooth_resample(xfwd, xbwd, w, t, np, n_fwd_half, n_bwd_half)
 
+        next!(pb)
+
     end 
 
     # Return xout and ess
@@ -167,7 +171,8 @@ end
                                    n_sim::Int = 100, 
                                    n_particle::Union{Nothing, Int} = nothing,
                                    cache::Bool = true, 
-                                   batch::Union{Nothing, Vector{String}} = nothing)
+                                   batch::Union{Nothing, Vector{String}} = nothing, 
+                                   progress = true)
 
 A two-filter particle smoother that samples from `f(s_t | y_{1:T})` for `t ∈ 1:T`.
 
@@ -183,6 +188,7 @@ A two-filter particle smoother that samples from `f(s_t | y_{1:T})` for `t ∈ 1
 - (optional) `n_particle`: An integer that defines the number of particles for smoothing. If `nothing`, all particles are used;
 - `cache`: A `Bool` that defines whether or not to precompute and cache movement density normalisation constants (see [`Patter.logpdf_move()`](@ref));
 - (optional) `batch`: A `Vector` of `.jld2` file paths for particles (see [`particle_filter()`](@ref));
+- (optional) `progress`: A NamedTuple of arguments, passed to `ProgressMeter.Progress`, to control the progress bar. If enabled, one progress bar is shown for each batch;
 
 # Details
 
@@ -209,7 +215,8 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
                                         n_particle::Union{Nothing, Int} = nothing,
                                         n_sim::Int = 100, 
                                         cache::Bool = true, 
-                                        batch::Union{Nothing, Vector{String}} = nothing)
+                                        batch::Union{Nothing, Vector{String}} = nothing, 
+                                        progress = ())
 
     #### Initialise
     call_start = now()
@@ -278,7 +285,8 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
                                              model_move = model_move,
                                              vmap       = vmap,
                                              n_sim      = n_sim,
-                                             cache      = cache)
+                                             cache      = cache, 
+                                             progress   = progress)
 
         # Update particles for t = 1 and t = T 
         if b == 1

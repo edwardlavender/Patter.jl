@@ -82,3 +82,55 @@ function split_indices(indices::Vector{Int}, n_chunk::Int)
     splits = [indices[(i-1)*div + min(i-1, rem) + 1 : i*div + min(i, rem)] for i in 1:n_chunk]
     return splits
 end 
+
+
+#########################
+#########################
+#### Progress
+
+# For R implementations, on Windows, we use a custom DisplayIO for the progress bar (for JuliaCall)
+# On MacOS/Linux, we the default stderr
+# This is a work around for https://github.com/JuliaInterop/JuliaCall/issues/232
+
+mutable struct ProgressWindowsDisplayIO <: IO
+    buffer::String
+end
+
+ProgressWindowsDisplayIO() = ProgressWindowsDisplayIO("")
+
+function Base.write(io::ProgressWindowsDisplayIO, s::Union{String, SubString{String}})
+    s_clean = replace(s, "\e[K" => "")
+    io.buffer *= s_clean
+    if occursin('\r', io.buffer) || occursin('\n', io.buffer)
+        for part in split(io.buffer, r"[\r\n]") 
+            part = strip(part)
+            if !isempty(part)
+                display(part)
+            end
+        end
+        io.buffer = ""
+    end
+    return sizeof(s)
+end
+
+function Base.write(io::ProgressWindowsDisplayIO, x::UInt8)
+    return Base.write(io, string(Char(x)))
+end
+
+function Base.write(io::ProgressWindowsDisplayIO, c::Char)
+    return Base.write(io, string(c))
+end
+
+Base.flush(::ProgressWindowsDisplayIO) = nothing
+
+# Internal function for controlling progress bar from R
+# > Functions e.g., particle_filter() have a `progress` argument 
+# > This accepts a tuple of arguments passed to Progress
+# > For R implementations, we force the output argument to be ProgressWindowsDisplayIO on Windows
+function progress_control(; kwargs...)
+    if Sys.iswindows()
+        return (output = ProgressWindowsDisplayIO(), kwargs...)
+    else
+        return (; kwargs...)
+    end
+end

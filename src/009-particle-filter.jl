@@ -1,6 +1,6 @@
 using Base.Threads: @threads
 using Dates
-using ProgressMeter: @showprogress
+using ProgressMeter
 using JLD2
 using LogExpFunctions: logsumexp
 using Random
@@ -145,7 +145,8 @@ function _particle_filter(
     n_resample::Float64 = Float64(n_record),
     t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
     direction::String = "forward", 
-    batch::Union{Nothing, Vector{String}} = nothing)
+    batch::Union{Nothing, Vector{String}} = nothing, 
+    progress = ())
 
     #### Define essential parameters
     # Number of time steps
@@ -220,7 +221,8 @@ function _particle_filter(
         end 
 
         # Run filter
-        @showprogress desc = "Running filter..." for (i, t) in zip(indices_for_batch, timesteps_for_batch)
+        pb = Progress(length(timesteps_for_batch); progress...)
+        for (i, t) in zip(indices_for_batch, timesteps_for_batch)
 
             # println(t)
 
@@ -286,6 +288,8 @@ function _particle_filter(
                 xpast .= xnow
             end
 
+            next!(pb)
+
         end
 
         # Write outputs to batch for file
@@ -316,7 +320,8 @@ end
                       t_resample::Union{Nothing, Int, Vector{Int}}  = nothing,
                       n_iter::Int64 = 1,
                       direction::String = "forward", 
-                      batch::Union{Nothing, Vector{String}} = nothing)
+                      batch::Union{Nothing, Vector{String}} = nothing, 
+                      progress = ())
 
 A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1:t`.
 
@@ -346,6 +351,7 @@ A particle filtering algorithm that samples from `f(s_t | y_{1:t})` for `t ∈ 1
     - `"forward"` runs the filter forwards in time;
     - `"backward"` runs the filter backwards in time;
 - (optional) `batch`: A Vector of `.jld2` file paths for particles (see Memory Management);
+- (optional) `progress`: A NamedTuple of arguments, passed to `ProgressMeter.Progress`, to control the progress bar. If enabled, one progress bar is shown for each batch;
 
 # Algorithm
 
@@ -407,7 +413,8 @@ function particle_filter(
     t_resample::Union{Nothing, Int, Vector{Int}} = nothing,
     n_iter::Int64 = 1,
     direction::String = "forward", 
-    batch::Union{Nothing, Vector{String}} = nothing)
+    batch::Union{Nothing, Vector{String}} = nothing, 
+    progress = ())
 
     # Run filter iteratively 
     call_start = now()
@@ -425,7 +432,8 @@ function particle_filter(
                                 n_resample = n_resample,
                                 t_resample = t_resample,
                                 direction  = direction, 
-                                batch      = batch)
+                                batch      = batch, 
+                                progress   = progress)
         if out.convergence[1]
             break
         end 
