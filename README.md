@@ -440,14 +440,14 @@ fwd.callstats
 #>  Row │ timestamp                routine          n_particle  n_iter  convergen ⋯
 #>      │ DateTime                 String           Int64       Int64   Bool      ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-27T15:15:27.256  filter: forward       10000       1         tr ⋯
+#>    1 │ 2025-02-28T16:17:47.394  filter: forward       10000       1         tr ⋯
 #>                                                                2 columns omitted
 fwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 fwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.067
+#>  1.399
 
 # Backward run outputs
 bwd.states
@@ -499,14 +499,14 @@ bwd.callstats
 #>  Row │ timestamp                routine           n_particle  n_iter  converge ⋯
 #>      │ DateTime                 String            Int64       Int64   Bool     ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-27T15:15:28.482  filter: backward       10000       1         t ⋯
+#>    1 │ 2025-02-28T16:17:48.965  filter: backward       10000       1         t ⋯
 #>                                                                2 columns omitted
 bwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 bwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  0.875
+#>  0.851
 ```
 
 ## Particle smoother
@@ -577,14 +577,14 @@ smo.callstats
 #>  Row │ timestamp                routine               n_particle  n_iter   con ⋯
 #>      │ DateTime                 String                Int64       Float64  Boo ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-27T15:15:30.397  smoother: two-filter         750      NaN      ⋯
+#>    1 │ 2025-02-28T16:17:50.957  smoother: two-filter         750      NaN      ⋯
 #>                                                                2 columns omitted
 smo.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 smo.callstats.time
 #> 1-element Vector{Float64}:
-#>  102.925
+#>  3.616
 ```
 
 # Mapping
