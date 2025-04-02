@@ -436,18 +436,18 @@ fwd.diagnostics
 #>  720 │      720  2016-03-18T01:48:00  9062.0      -9.31601
 #>                                            705 rows omitted
 fwd.callstats
-#> 1×6 DataFrame
-#>  Row │ timestamp                routine          n_particle  n_iter  convergen ⋯
-#>      │ DateTime                 String           Int64       Int64   Bool      ⋯
+#> 1×7 DataFrame
+#>  Row │ timestamp                routine          n_particle  n_iter  loglik    ⋯
+#>      │ DateTime                 String           Int64       Int64   Float64   ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-28T16:17:47.394  filter: forward       10000       1         tr ⋯
+#>    1 │ 2025-04-02T10:39:18.292  filter: forward       10000       1  -48178.5  ⋯
 #>                                                                2 columns omitted
 fwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 fwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.399
+#>  1.341
 
 # Backward run outputs
 bwd.states
@@ -495,18 +495,18 @@ bwd.diagnostics
 #>  720 │      720  2016-03-18T01:48:00  9428.8     -4.658
 #>                                           705 rows omitted
 bwd.callstats
-#> 1×6 DataFrame
-#>  Row │ timestamp                routine           n_particle  n_iter  converge ⋯
-#>      │ DateTime                 String            Int64       Int64   Bool     ⋯
+#> 1×7 DataFrame
+#>  Row │ timestamp                routine           n_particle  n_iter  loglik   ⋯
+#>      │ DateTime                 String            Int64       Int64   Float64  ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-28T16:17:48.965  filter: backward       10000       1         t ⋯
+#>    1 │ 2025-04-02T10:39:19.796  filter: backward       10000       1  -53307.5 ⋯
 #>                                                                2 columns omitted
 bwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 bwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  0.851
+#>  0.873
 ```
 
 ## Particle smoother
@@ -573,18 +573,18 @@ smo.diagnostics
 #>  720 │      720  2016-03-18T01:48:00  750.0         NaN
 #>                                         705 rows omitted
 smo.callstats
-#> 1×6 DataFrame
-#>  Row │ timestamp                routine               n_particle  n_iter   con ⋯
-#>      │ DateTime                 String                Int64       Float64  Boo ⋯
+#> 1×7 DataFrame
+#>  Row │ timestamp                routine               n_particle  n_iter   log ⋯
+#>      │ DateTime                 String                Int64       Float64  Flo ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-02-28T16:17:50.957  smoother: two-filter         750      NaN      ⋯
-#>                                                                2 columns omitted
+#>    1 │ 2025-04-02T10:39:21.744  smoother: two-filter         750      NaN      ⋯
+#>                                                                3 columns omitted
 smo.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 smo.callstats.time
 #> 1-element Vector{Float64}:
-#>  3.616
+#>  3.313
 ```
 
 # Mapping

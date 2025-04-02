@@ -296,8 +296,7 @@ function logpdf_obs(state::State, model::ModelObsContainer, t::Int64, obs::Int64
     # Only particles within model.radius are permitted
     # * radius is a pre-calculated field in model
     # * (For acoustics: radius = receiver_gamma + (receiver_timestep - t) * mobility)
-    # * Note that we should technically normalise densities over the area spanned by the container
-    # * In practice, we don't need to do this b/c we adjust all valid particles by the same constant
-    # * And we normalise the weights in the particle filter, so this cancels out 
+    # return ifelse(dist <= model.radius, log(1.0 / (π * model.radius^2)), -Inf)
+    # Return 0.0 or -Inf (CA)
     return ifelse(dist <= model.radius, 0.0, -Inf)
 end

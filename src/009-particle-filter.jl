@@ -17,17 +17,18 @@ export particle_filter
     - Each row corresponds to a particle;
     - Each column corresponds to the `timestep`;
 - `diagnostics`: A `DataFrame` of algorithm diagnostics:
-    -   timestep: A `Vector{Int64}` of time steps;
-    -   timestamp: A `Vector{DateTime}` of time stamps;
-    -   ess: A `Vector{Float64}` that defines the effective sample size at each time step;
-    -   maxlp:  `Vector{Float64}` that defines the maximum log weight at each time step (i.e., the maximum log-posterior, if resampling is implemented at every time step);
+    -   `timestep`: A `Vector{Int64}` of time steps;
+    -   `timestamp`: A `Vector{DateTime}` of time stamps;
+    -   `ess`: A `Vector{Float64}` that defines the effective sample size at each time step;
+    -   `maxlp`:  `Vector{Float64}` that defines the maximum log weight at each time step (i.e., the maximum log-posterior, if resampling is implemented at every time step);
 - `callstats`: A one-row `DataFrame` of call statistics:
-    -   timestamp: A `DateTime` that define the start time of the function call;
-    -   routine: A `String` that defines the algorithm;
-    -   n_particle: An `Int` that defines the number of particles;
-    -   n_iter: An `Int` or `NaN` that defines the number of iterations (trials);
-    -   convergence: A `Boolian` that defines convergence;
-    -   time: A `Float64` that defines the duration (s) of the function call;
+    -   `timestamp`: A `DateTime` that define the start time of the function call;
+    -   `routine`: A `String` that defines the algorithm;
+    -   `n_particle`: An `Int` that defines the number of particles;
+    -   `n_iter`: An `Int` or `NaN` that defines the number of iterations (trials);
+    -   `convergence`: A `Boolian` that defines convergence;
+    -   `loglik`: A `Float64` that defines the log-likelihood (log P(observations | θ));
+    -   `time`: A `Float64` that defines the duration (s) of the function call;
 
 # Details
 
@@ -58,6 +59,7 @@ function particulate(routine::String,
                      maxlp::Vector{Float64}, 
                      n_particle::Int, 
                      n_iter::Union{Int, Float64}, # NaN in particle_smoother_two_filter()
+                     loglik::Float64,
                      convergence::Bool)
 
     diagnostics = DataFrame(timestep  = collect(1:length(timeline)), 
@@ -69,6 +71,7 @@ function particulate(routine::String,
                           routine     = routine,
                           n_particle  = n_particle,
                           n_iter      = n_iter,
+                          loglik      = loglik,
                           convergence = convergence,
                           time        = call_duration(timestamp))
                           
@@ -154,6 +157,7 @@ function _particle_filter(
     nt = length(timeline)
     # Number of particles
     np = length(xinit)
+    log_np = log(np)
     # Number of recorded particles
     nr = n_record
     # Use t_resample
@@ -207,6 +211,8 @@ function _particle_filter(
     ess = fill(NaN, nt)
     # Output maxlp vector
     maxlp = fill(NaN, nt)
+    # loglik 
+    loglik = 0.0
 
     #### Run filter
     for b in 1:nb
@@ -250,7 +256,12 @@ function _particle_filter(
             end
 
             #### Record diagnostics
+            # Maxmimum log posterior
             maxlp[t] = maximum(lw)
+            # Update log likelihood
+            # loglik is sum of the logs of the average unnormalised weight at each time step
+            # i.e., loglik = sum over all T: log(sum(w) / N)
+            loglik += logsumexp(lw) - log_np
 
             #### Validate weights
             if !any(isfinite.(lw))
@@ -269,7 +280,7 @@ function _particle_filter(
                     end 
                     xout = nothing
                 end 
-                return (timeline = timeline[pos], states = xout, ess = ess[pos], maxlp = maxlp[pos], convergence = false)
+                return (timeline = timeline[pos], states = xout, ess = ess[pos], maxlp = maxlp[pos], loglik = -Inf, convergence = false)
             end
 
             #### Resample particles
@@ -308,7 +319,7 @@ function _particle_filter(
 
     end 
 
-    return (timeline = timeline, states = xout, ess = ess, maxlp = maxlp, convergence = true)
+    return (timeline = timeline, states = xout, ess = ess, maxlp = maxlp, loglik = loglik, convergence = true)
 
 
 end
@@ -451,6 +462,6 @@ function particle_filter(
 
     return particulate("filter: " * direction, call_start, 
                        out.timeline, out.states, out.ess, out.maxlp, 
-                       length(xinit), iter, out.convergence)
+                       length(xinit), iter, out.loglik, out.convergence)
 
 end

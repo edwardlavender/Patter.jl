@@ -341,6 +341,6 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
     #### Return outputs
     particulate("smoother: two-filter", call_start, 
                 timeline, xout, ess, fill(NaN, length(timeline)), 
-                np, NaN, convergence)
+                np, NaN, NaN, convergence)
 
 end
