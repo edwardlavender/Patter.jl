@@ -1,5 +1,5 @@
 
-# `Patter.jl` <a href="https://edwardlavender.github.io/Patter.jl"><img src="docs/figures/logo.png" align="right" height="138" /></a>
+# `Patter.jl` <a href="https://edwardlavender.github.io/Patter.jl/"><img src="docs/figures/logo.png" align="right" height="130" alt="Patter.jl website" /></a>
 
 **Particle algorithms for animal movement modelling in
 [`Julia`](https://julialang.org)**
@@ -239,8 +239,9 @@ standard archival dataset. The acoustic containers dataset is derived
 from the acoustic dataset and defines the maximum possible distance of
 the individual from the receiver(s) that recorded the next detection(s)
 at each time step. This dataset facilitates convergence in the particle
-filter. The wrapper `patter` package contains helper routines for the
-assembly of these datasets, if required.
+filter. The wrapper [`patter`](https://github.com/edwardlavender/patter)
+package contains helper routines for the assembly of these datasets, if
+required.
 
 ``` julia
 # Read acoustic (0, 1) observations
@@ -440,14 +441,14 @@ fwd.callstats
 #>  Row │ timestamp                routine          n_particle  n_iter  loglik    ⋯
 #>      │ DateTime                 String           Int64       Int64   Float64   ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-02T10:39:18.292  filter: forward       10000       1  -48178.5  ⋯
+#>    1 │ 2025-04-09T16:44:30.689  filter: forward       10000       1  -48178.5  ⋯
 #>                                                                2 columns omitted
 fwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 fwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.341
+#>  0.852
 
 # Backward run outputs
 bwd.states
@@ -499,14 +500,14 @@ bwd.callstats
 #>  Row │ timestamp                routine           n_particle  n_iter  loglik   ⋯
 #>      │ DateTime                 String            Int64       Int64   Float64  ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-02T10:39:19.796  filter: backward       10000       1  -53307.5 ⋯
+#>    1 │ 2025-04-09T16:44:31.689  filter: backward       10000       1  -53307.5 ⋯
 #>                                                                2 columns omitted
 bwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 bwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  0.873
+#>  0.944
 ```
 
 ## Particle smoother
@@ -577,14 +578,14 @@ smo.callstats
 #>  Row │ timestamp                routine               n_particle  n_iter   log ⋯
 #>      │ DateTime                 String                Int64       Float64  Flo ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-02T10:39:21.744  smoother: two-filter         750      NaN      ⋯
+#>    1 │ 2025-04-09T16:44:33.046  smoother: two-filter         750      NaN      ⋯
 #>                                                                3 columns omitted
 smo.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 smo.callstats.time
 #> 1-element Vector{Float64}:
-#>  3.313
+#>  3.235
 ```
 
 # Mapping
@@ -593,8 +594,11 @@ Particles can be used to reconstruct movement paths and patterns of
 space use. At the time of writing, `Patter.jl` focuses entirely on the
 provision of fast particle algorithms and lacks supporting routines for
 mapping and visualisation. However, we can easily estimate a utilisation
-distribution from `Julia` using the wrapper `patter` `R` package via
-`RCall` (on Windows and MacOS). This is the `R` code:
+distribution from `Julia` using the wrapper
+[`patter`](https://github.com/edwardlavender/patter)
+[`R`](https://www.r-project.org) package via
+[`RCall`](https://github.com/JuliaInterop/RCall.jl) (on Windows and
+MacOS). This is the [`R`](https://www.r-project.org) code:
 
 ``` r
 # Load & attach packages
@@ -640,34 +644,93 @@ queries.
 
 - The [online](https://edwardlavender.github.io/Patter.jl/) package
   documentation;
-- `?patter::particle_filter()` for information on specific functions;
+- `?Patter.particle_filter()` for information on specific functions;
 
 **For additional resources**, see the documentation for the
-[`patter`](https://github.com/edwardlavender/patter) `R` package.
+[`patter`](https://github.com/edwardlavender/patter)
+[`R`](https://www.r-project.org) package.
 
 # Disclaimer and troubleshooting
 
-`Patter` is a new `Julia` package. All routines are experimental.
+`Patter.jl` is a new `Julia` package. All routines are experimental.
 Researchers interested in using the package are encouraged to get in
 touch while the methods and package remain at an early stage of
 evolution (<edward.lavender@eawag.ch>).
 
 # Citation
 
-To cite `patter` in publications, please use:
+**To cite `Patter.jl` in publications**, please use:
 
-- Lavender, E. et al. (2023). An integrative modelling framework for
-  passive acoustic telemetry. Methods in Ecology and Evolution.
-  <https://doi.org/10.1111/2041-210X.14193>
-- Lavender, E. et al. (in prep). Particle algorithms for animal movement
-  modelling in autonomous receiver networks.
-- Lavender, E. et al. (in prep). Particle algorithms for animal tracking
-  in `R` and `Julia`. <https://doi.org/10.1101/2024.07.30.605733>
-- Lavender, E. et al. (in prep). Particle filtering reveals patterns of
-  space use in a Critically Endangered elasmobranch.
+- Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Illian, J.,
+  Thorburn, J., Smout, S., & Moor, H. (2025). Particle algorithms for
+  animal movement modelling in receiver arrays. Methods in Ecology and
+  Evolution, 00, 1–12. <https://doi.org/10.1111/2041-210X.70028>
+- Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Illian, J.,
+  Thorburn, J., Smout, S., & Moor, H. (2025). patter: Particle
+  algorithms for animal tracking in R and Julia. Methods in Ecology and
+  Evolution, 00, 1–8. <https://doi.org/10.1111/2041-210X.70029>
+- Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Brodersen,
+  J., Aleynik, D., Cole, G., Dodd, J., Wright, P. J., Illian, J., James,
+  M., Smout, S., Thorburn, J., & Moor, H. (2025). Animal tracking with
+  particle algorithms for conservation. bioRxiv.
+  <https://doi.org/10.1101/2025.02.13.638042>
+
+For the `BibTex`:
+
+    @Article{Lavender2025a,
+      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
+      title   = {Particle algorithms for animal movement modelling in receiver arrays},
+      journal = {Methods in Ecology and Evolution},
+      year    = {2025},
+      volume  = {00},
+      pages   = {1--12},
+      doi     = {10.1111/2041-210X.70028}
+    }
+
+    @Article{Lavender2025b,
+      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
+      title   = {patter: Particle algorithms for animal tracking in R and Julia},
+      journal = {Methods in Ecology and Evolution},
+      year    = {2025},
+      volume  = {00},
+      pages   = {1--8},
+      doi     = {10.1111/2041-210X.70029}
+    }
+
+    @Article{Lavender2025c,
+      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Brodersen, Jakob and Aleynik, Dmitry and Cole, Georgina and Dodd, Jane and Wright, Peter J. and Illian, Janine and James, Mark and Smout, Sophie and Thorburn, James and Moor, Helen},
+      title   = {Animal tracking with particle algorithms for conservation},
+      journal = {bioRxiv},
+      year    = {2025},
+      doi     = {10.1101/2025.02.13.638042}
+    }
+
+**`Patter.jl` evolved from the
+[`flapper`](https://github.com/edwardlavender/flapper)
+[`R`](https://www.r-project.org) package**. Please also consider citing
+that publication:
+
+Lavender, E., Biber, S., Illian, J., James, M., Wright, P., Thorburn,
+J., & Smout, S. (2023). An integrative modelling framework for passive
+acoustic telemetry. Methods in Ecology and Evolution, 14, 2626–2638.
+<https://doi.org/10.1111/2041-210X.14193>
+
+    @Article{Lavender2023,
+      author  = {Lavender, Edward and Biber, Stanisław W. and Illian, Janine and James, Mark and Wright, Peter J. and Thorburn, James and Smout, Sophie},
+      title   = {An integrative modelling framework for passive acoustic telemetry},
+      journal = {Methods in Ecology and Evolution},
+      year    = {2023},
+      volume  = {14},
+      pages   = {2626--2638},
+      doi     = {10.1111/2041-210X.14193}
+      }
+    }
+
+**Thank you for citing the package. Your citations help to justify
+continued investments in its development.**
 
 ------------------------------------------------------------------------
 
-Please note that `patter` is released with a [Contributor Code of
+Please note that `Patter.jl` is released with a [Contributor Code of
 Conduct](https://contributor-covenant.org/version/2/1/CODE_OF_CONDUCT.html).
 By contributing to this project, you agree to abide by its terms.
