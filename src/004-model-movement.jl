@@ -37,16 +37,17 @@ These contain the following fields:
 To define a custom sub-type, such as `ModelMoveXYZ`*, simply define a `struct` that is a sub-type of `Patter.ModelMove`:
 
 ```
-struct ModelMoveXYZ{T, U, V, W} <: Patter.ModelMove
+struct ModelMoveXYZ{T, U, V, W, X} <: Patter.ModelMove
     # The environment (i.e., map)
     # > This defines the regions within which movements are permitted (i.e., in water)
     map::T
     # Distribution for step lengths
-    dbn_length::U
+    mobility::U
+    dbn_length::V
     # Distribution for headings
-    dbn_heading::V
+    dbn_heading::W
     # Distribution for changes in depth
-    dbn_z::W
+    dbn_z::X
   end
 ```
 
