@@ -95,12 +95,74 @@ We can simulate observations from this model as for previous models via `Patter.
 
 ## `ModelObsContainer`
 
-`ModelObsContainer` is a `ModelObs` structure for a container. Containers define the maximum possible distance of an individual from a location (e.g., receiver) that recorded a future observation. This contains the following fields:
-- `sensor_id`: An integer that defines the sensor (receiver) ID for the receiver that recorded the next detection;
-- `centroid_x`, `centroid_y`: Floats that define the x and y coordinates of the container's centroid;
-- `radius`: A Float that defines the radius of the container; 
+`ModelObsContainer` is a `ModelObs` structure for a container. Containers are a computational device used to mitigate particle degeneracy in the particle filter. Containers define the maximum possible distance of an individual from a location (e.g., receiver) that recorded a future observation. Accordingly, the `ModelObsContainer` structure contains the following fields:
+- `sensor_id`: An `integer` that defines the sensor ID (e.g., the receiver ID for the receiver that recorded the next detection);
+- `centroid_x`, `centroid_y`: `Float`s that define the x and y coordinates of the container's centroid;
+- `radius`: A `Float` that defines the radius of the container; 
 
-Containers are a computational device used to facilitate convergence in the particle filter. At each time step, particles are permitted or killed depending on whether or not the distance between a particle and the locations(s) that recorded the next observation(s) is ≤ `radius`.
+An acoustic container defines the region within which an individual must be located according to the receiver(s) at which it was next detected. In the particle filter, particles are permitted or killed depending on whether or not they are compatible with this constraint.
+
+We formalise the acoustic container constraint as follows. Let ``t`` denote the movement timeline (where ``t \\in \\{1,2, \\dots ,T\\}``), ``\\boldsymbol{s}`` denote the individual's latent state (typically (x,y) location), ``\\boldsymbol{y}`` denote acoustic observations (detections, non-detections) at receivers and ``\\boldsymbol{\\theta}`` denote static parameters (in the movement and observation models). The likelihood of the observations ``\\boldsymbol{y}_{1:T}`` given the parameters ``\\boldsymbol{\\theta}`` is expressed as
+
+```math
+f(\\boldsymbol{y}_{1:T}\\mid\\boldsymbol{\\theta}) =
+\\int
+\\prod_{t=1}^{T}
+f(\\boldsymbol{y}_{t}\\mid\\boldsymbol{s}_{t},\\boldsymbol{\\theta})
+\\, f(\\boldsymbol{s}_{t}\\mid\\boldsymbol{s}_{t-1},\\boldsymbol{\\theta})
+\\, d\\boldsymbol{s}_{1:T}.
+```
+
+Acoustic containerisation represents a redefinition of the likelihood ``f(\\boldsymbol{y}_{t}\\mid\\boldsymbol{s}_{t},\\boldsymbol{\\theta})``, in a manner that does not affect the likelihood ``f(\\boldsymbol{y}_{1:T}\\mid\\boldsymbol{\\theta})``, with the addition of a characteristic function ``\\chi(t,\\boldsymbol{s}_{t},\\boldsymbol{y}) \\in \\{0,1\\}`` that returns zero or one depending on whether or not the latent state ``\\boldsymbol{s}_{t}`` is compatible with the observations at some future time:
+
+```math
+f(\\boldsymbol{y}_{1:T}\\mid\\boldsymbol{\\theta}) =
+\\int
+\\prod_{t=1}^{T}
+f(\\boldsymbol{y}_{t}\\mid\\boldsymbol{s}_{t},\\boldsymbol{\\theta})
+\\, \\chi(t,\\boldsymbol{s}_{t},\\boldsymbol{y})
+\\, f(\\boldsymbol{s}_{t}\\mid\\boldsymbol{s}_{t-1},\\boldsymbol{\\theta})
+\\, d\\boldsymbol{s}_{1:T}.
+```
+
+The characteristic function ``\\chi(t,\\boldsymbol{s}_{t},\\boldsymbol{y})`` is defined as follows.  
+Let ``\\Delta(t)`` be a function that identifies the next time step (at some time after ``t``) at which detection(s) were recorded.  
+At time ``t`` the individual must be within a maximum distance (denoted ``\\text{radius}_{k}``) of each receiver ``k`` that recorded the next detection(s):
+
+```math
+\\chi(t,\\boldsymbol{s}_{t},\\boldsymbol{y}) =
+\\prod_{k}
+\\chi_{k}\\!\\bigl(
+\\lVert \\boldsymbol{r}_{k,\\Delta(t)} - \\boldsymbol{s}_{t} \\rVert
+\\le \\text{radius}_{k}(\\text{mobility})
+\\bigr),
+```
+
+where ``\\boldsymbol{r}_{k,\\Delta(t)}`` denotes the location of receiver ``k``.
+
+The radius for receiver ``k`` at time ``t`` depends on the number of time steps from ``t`` until the detection event ``(\\Delta(t)-t)``, a parameter ``\\text{mobility} \\in \\boldsymbol{\\theta}`` that defines the maximum possible moveable distance in between two time steps (i.e., from ``t \\to t+1``) and the receiver’s maximum detection range ``\\gamma \\in \\boldsymbol{\\theta}``:
+
+```math
+\\text{radius}(\\text{mobility}) =
+(\\Delta(t)-t)\\,\\text{mobility} + \\gamma.
+```
+
+In practice, acoustic containers are implemented via the `ModelObsContainer` structure (that is, we treat the container like an additional observation, even though it is simply a redundant use of the data).  `ModelObsContainer` instances must be assembled before the filter run, following the equations above. For relevant time steps, it is necessary to build a `ModelObsContainer` for each of the receiver(s) that recorded a detection at the next detection time step. Each instance contains `centroid_x` and `centroid_y` elements that define the centroid of the container and a `radius` element that defines the maximum possible distance of the individual from the container centroid (see above).
+
+In the particle filter, at each time ``t``, we iterate over all observation‑model structures and update particle weights using a `Patter.logpdf_obs` method. For `ModelObsContainer` instances, the `Patter.logpdf_obs` method computes the distance between the particle ``(i)`` and receiver ``k``’s location (centroid) and adds ``0.0`` or ``\\text{-Inf}`` to the log weight (``\\text{lw}``) depending on whether or not the distance is less than the radius:
+
+```math
+\\text{lw}_i =
+\\text{lw}_i +
+\\log\\!\\bigl(
+\\chi_{k}\\!\\bigl(
+\\lVert \\boldsymbol{r}_{k,\\Delta(t)} - \\boldsymbol{s}_{t} \\rVert
+\\le \\text{radius}_{k}(\\text{mobility})
+\\bigr)
+\\bigr).
+```
+
+This approach is valid because we only kill particles that are incompatible with future observations. A filtering–smoothing algorithm that implements acoustic containerisation thus still approximates ``f(\\boldsymbol{s}_{t}\\mid\\boldsymbol{y}_{1:T})`` once all data have been taken into account.
 
 # Custom sub-types
 
