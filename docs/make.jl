@@ -3,7 +3,10 @@ using Patter
 
 makedocs(
     sitename = "Patter",
-    format = Documenter.HTML(),
+    # Boost permitted html size
+    # 300 * 2^10 = 300 kiB (default = 200)
+    format = Documenter.HTML(size_threshold = 300 * 2^10, 
+                             size_threshold_warn = 300 * 2^10), 
     modules = [Patter]
 )
 
