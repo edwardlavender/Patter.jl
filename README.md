@@ -441,14 +441,14 @@ fwd.callstats
 #>  Row │ timestamp                routine          n_particle  n_iter  loglik    ⋯
 #>      │ DateTime                 String           Int64       Int64   Float64   ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-17T15:16:55.379  filter: forward       10000       1  -48178.5  ⋯
+#>    1 │ 2025-12-01T16:55:59.905  filter: forward       10000       1  -48178.5  ⋯
 #>                                                                2 columns omitted
 fwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 fwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.634
+#>  1.149
 
 # Backward run outputs
 bwd.states
@@ -475,39 +475,39 @@ bwd.states
 #>  StateXY(59.7652, 7.09127e5, 6.25297e6)     StateXY(147.137, 7.10642e5, 6.26971e6)
 bwd.diagnostics
 #> 720×4 DataFrame
-#>  Row │ timestep  timestamp            ess       maxlp
-#>      │ Int64     DateTime             Float64   Float64
-#> ─────┼────────────────────────────────────────────────────
-#>    1 │        1  2016-03-17T01:50:00  1448.79   -19.9716
-#>    2 │        2  2016-03-17T01:52:00  2349.48   -14.7268
-#>    3 │        3  2016-03-17T01:54:00  3864.22    -9.59918
-#>    4 │        4  2016-03-17T01:56:00  5177.9     -4.54713
-#>    5 │        5  2016-03-17T01:58:00   844.0    -30.3056
-#>    6 │        6  2016-03-17T02:00:00  1397.28   -25.1394
-#>    7 │        7  2016-03-17T02:02:00  1894.62   -19.6937
-#>    8 │        8  2016-03-17T02:04:00  3168.63   -14.7673
-#>   ⋮  │    ⋮               ⋮              ⋮          ⋮
-#>  714 │      714  2016-03-18T01:36:00  4992.06   -32.6185
-#>  715 │      715  2016-03-18T01:38:00  5178.1    -27.9506
-#>  716 │      716  2016-03-18T01:40:00  5584.11   -23.2906
-#>  717 │      717  2016-03-18T01:42:00  6171.83   -18.6322
-#>  718 │      718  2016-03-18T01:44:00  7024.63   -13.974
-#>  719 │      719  2016-03-18T01:46:00  8041.25    -9.31601
-#>  720 │      720  2016-03-18T01:48:00  9428.8     -4.658
-#>                                           705 rows omitted
+#>  Row │ timestep  timestamp            ess      maxlp
+#>      │ Int64     DateTime             Float64  Float64
+#> ─────┼───────────────────────────────────────────────────
+#>    1 │        1  2016-03-17T01:50:00  1448.79  -19.9716
+#>    2 │        2  2016-03-17T01:52:00  2349.48  -14.7268
+#>    3 │        3  2016-03-17T01:54:00  3864.22   -9.59918
+#>    4 │        4  2016-03-17T01:56:00  5177.9    -4.54713
+#>    5 │        5  2016-03-17T01:58:00   844.0   -30.3056
+#>    6 │        6  2016-03-17T02:00:00  1397.28  -25.1394
+#>    7 │        7  2016-03-17T02:02:00  1894.62  -19.6937
+#>    8 │        8  2016-03-17T02:04:00  3168.63  -14.7673
+#>   ⋮  │    ⋮               ⋮              ⋮         ⋮
+#>  714 │      714  2016-03-18T01:36:00  4992.06  -32.6185
+#>  715 │      715  2016-03-18T01:38:00  5178.1   -27.9506
+#>  716 │      716  2016-03-18T01:40:00  5584.11  -23.2906
+#>  717 │      717  2016-03-18T01:42:00  6171.83  -18.6322
+#>  718 │      718  2016-03-18T01:44:00  7024.63  -13.974
+#>  719 │      719  2016-03-18T01:46:00  8041.25   -9.31601
+#>  720 │      720  2016-03-18T01:48:00  9428.8    -4.658
+#>                                          705 rows omitted
 bwd.callstats
 #> 1×7 DataFrame
 #>  Row │ timestamp                routine           n_particle  n_iter  loglik   ⋯
 #>      │ DateTime                 String            Int64       Int64   Float64  ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-17T15:16:57.198  filter: backward       10000       1  -53307.5 ⋯
+#>    1 │ 2025-12-01T16:56:01.258  filter: backward       10000       1  -53307.5 ⋯
 #>                                                                2 columns omitted
 bwd.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 bwd.callstats.time
 #> 1-element Vector{Float64}:
-#>  1.152
+#>  0.869
 ```
 
 ## Particle smoother
@@ -578,14 +578,14 @@ smo.callstats
 #>  Row │ timestamp                routine               n_particle  n_iter   log ⋯
 #>      │ DateTime                 String                Int64       Float64  Flo ⋯
 #> ─────┼──────────────────────────────────────────────────────────────────────────
-#>    1 │ 2025-04-17T15:16:59.531  smoother: two-filter         750      NaN      ⋯
+#>    1 │ 2025-12-01T16:56:03.454  smoother: two-filter         750      NaN      ⋯
 #>                                                                3 columns omitted
 smo.callstats.convergence
 #> 1-element Vector{Bool}:
 #>  1
 smo.callstats.time
 #> 1-element Vector{Float64}:
-#>  4.251
+#>  3.172
 ```
 
 # Mapping
@@ -617,6 +617,7 @@ ud <- map_dens(.map     = map,
                .coord   = smo$states,
                .sigma   = bw.h, 
                .verbose = FALSE)$ud
+#> Warning: PROJ: proj_create_from_database: Cannot find proj.db (GDAL error 1)
 
 # Add home range
 map_hr_home(ud, .add = TRUE)
@@ -664,46 +665,54 @@ evolution (<edward.lavender@eawag.ch>).
 - Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Illian, J.,
   Thorburn, J., Smout, S., & Moor, H. (2025). Particle algorithms for
   animal movement modelling in receiver arrays. Methods in Ecology and
-  Evolution, 00, 1–12. <https://doi.org/10.1111/2041-210X.70028>
+  Evolution, 16, 1808–1819. <https://doi.org/10.1111/2041-210X.70028>
 - Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Illian, J.,
   Thorburn, J., Smout, S., & Moor, H. (2025). patter: Particle
   algorithms for animal tracking in R and Julia. Methods in Ecology and
-  Evolution, 00, 1–8. <https://doi.org/10.1111/2041-210X.70029>
+  Evolution, 16, 1609–1616. <https://doi.org/10.1111/2041-210X.70029>
 - Lavender, E., Scheidegger, A., Albert, C., Biber, S. W., Brodersen,
   J., Aleynik, D., Cole, G., Dodd, J., Wright, P. J., Illian, J., James,
   M., Smout, S., Thorburn, J., & Moor, H. (2025). Animal tracking with
-  particle algorithms for conservation. bioRxiv.
-  <https://doi.org/10.1101/2025.02.13.638042>
+  particle algorithms informs protected area design. Science Advances,
+  11, eadx0255. <https://doi.org/10.1126/sciadv.adx0255>
 
 For the `BibTex`:
 
-    @Article{Lavender2025a,
-      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
-      title   = {Particle algorithms for animal movement modelling in receiver arrays},
-      journal = {Methods in Ecology and Evolution},
-      year    = {2025},
-      volume  = {00},
-      pages   = {1--12},
-      doi     = {10.1111/2041-210X.70028}
-    }
+``` bibtex
+@Article{Lavender2025a,
+  author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
+  title   = {Particle algorithms for animal movement modelling in receiver arrays},
+  journal = {Methods in Ecology and Evolution},
+  year    = {2025},
+  volume  = {16},
+  pages   = {1808--1819},
+  doi     = {10.1111/2041-210X.70028}
+}
+```
 
-    @Article{Lavender2025b,
-      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
-      title   = {patter: Particle algorithms for animal tracking in R and Julia},
-      journal = {Methods in Ecology and Evolution},
-      year    = {2025},
-      volume  = {00},
-      pages   = {1--8},
-      doi     = {10.1111/2041-210X.70029}
-    }
+``` bibtex
+@Article{Lavender2025b,
+  author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Illian, Janine and Thorburn, James and Smout, Sophie and Moor, Helen},
+  title   = {patter: Particle algorithms for animal tracking in R and Julia},
+  journal = {Methods in Ecology and Evolution},
+  year    = {2025},
+  volume  = {16},
+  pages   = {1609--1616},
+  doi     = {10.1111/2041-210X.70029}
+}
+```
 
-    @Article{Lavender2025c,
-      author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Brodersen, Jakob and Aleynik, Dmitry and Cole, Georgina and Dodd, Jane and Wright, Peter J. and Illian, Janine and James, Mark and Smout, Sophie and Thorburn, James and Moor, Helen},
-      title   = {Animal tracking with particle algorithms for conservation},
-      journal = {bioRxiv},
-      year    = {2025},
-      doi     = {10.1101/2025.02.13.638042}
-    }
+``` bibtex
+@Article{Lavender2025c,
+  author  = {Lavender, Edward and Scheidegger, Andreas and Albert, Carlo and Biber, Stanisław W. and Brodersen, Jakob and Aleynik, Dmitry and Cole, Georgina and Dodd, Jane and Wright, Peter J. and Illian, Janine and James, Mark and Smout, Sophie and Thorburn, James and Moor, Helen},
+  title   = {Animal tracking with particle algorithms informs protected area design},
+  journal = {Science Advances},
+  year    = {2025},
+  volume  = {11},
+  pages   = {eadx0255},
+  doi     = {10.1126/sciadv.adx0255}
+}
+```
 
 **`Patter.jl` evolved from the
 [`flapper`](https://github.com/edwardlavender/flapper)
@@ -715,16 +724,18 @@ J., & Smout, S. (2023). An integrative modelling framework for passive
 acoustic telemetry. Methods in Ecology and Evolution, 14, 2626–2638.
 <https://doi.org/10.1111/2041-210X.14193>
 
-    @Article{Lavender2023,
-      author  = {Lavender, Edward and Biber, Stanisław W. and Illian, Janine and James, Mark and Wright, Peter J. and Thorburn, James and Smout, Sophie},
-      title   = {An integrative modelling framework for passive acoustic telemetry},
-      journal = {Methods in Ecology and Evolution},
-      year    = {2023},
-      volume  = {14},
-      pages   = {2626--2638},
-      doi     = {10.1111/2041-210X.14193}
-      }
-    }
+``` bibtex
+@Article{Lavender2023,
+  author  = {Lavender, Edward and Biber, Stanisław W. and Illian, Janine and James, Mark and Wright, Peter J. and Thorburn, James and Smout, Sophie},
+  title   = {An integrative modelling framework for passive acoustic telemetry},
+  journal = {Methods in Ecology and Evolution},
+  year    = {2023},
+  volume  = {14},
+  pages   = {2626--2638},
+  doi     = {10.1111/2041-210X.14193}
+  }
+}
+```
 
 **Thank you for citing the package. Your citations help to justify
 continued investments in its development.**
