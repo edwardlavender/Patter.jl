@@ -103,7 +103,7 @@ In `Patter.jl`, `map` is a `GeoArray` that defines the area within which movemen
 """
 function extract(map::GeoArrays.GeoArray, x::Real, y::Real)
     # Get row and column indices from coordinates
-    rc = GeoArrays.indices(map, [x, y])
+    rc = GeoArrays.indices(map, (x, y))
     if checkbounds(Bool, map, rc)
         # Extract value of the GeoArray at the specified row/column
         map[rc[1], rc[2], 1]

@@ -34,7 +34,7 @@ where ``p_{k,t}(\\textit{\\textbf{s}}_t)`` is the probability of a detection at 
 ```math
 p_{k,t}(\\textit{\\textbf{s}}_t) = \\left\\{
 \\begin{array}{ll}
-(1 + e^{-(\\text{receiver\\_alpha} - \\text{receiver\\_beta} \\cdot |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k|)})^{-1} & \\text{if } |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k| < \\text{receiver\\_gamma} \\\\
+(1 + e^{-(\\text{receiver\\_alpha} + \\text{receiver\\_beta} \\cdot |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k|)})^{-1} & \\text{if } |\\textit{\\textbf{s}}_t - \\textit{\\textbf{r}}_k| < \\text{receiver\\_gamma} \\\\
 0 & \\text{otherwise}
 \\end{array}
 \\right.
