@@ -1,4 +1,7 @@
 Manifest.toml
+benchmarks/
+data/
+dev/
 docs/build/
 docs/site/
-dev/
+
