@@ -101,17 +101,16 @@ In `Patter.jl`, `map` is a `GeoArray` that defines the area within which movemen
 * [`simulate_path_walk()`](@ref) and [`particle_filter()`](@ref) for the front-end functions that use these routines to simulate animal movement paths;
 
 """
-function extract(map::GeoArrays.GeoArray, x::Real, y::Real)
+function extract(map::GeoArrays.GeoArray{T, 2, Matrix{T}}, x::Real, y::Real) where T <: Union{Float32, Float64}
     # Get row and column indices from coordinates
     rc = GeoArrays.indices(map, (x, y))
     if checkbounds(Bool, map, rc)
         # Extract value of the GeoArray at the specified row/column
         map[rc[1], rc[2], 1]
     else
-        eltype(map)(NaN)
+        T(NaN)
     end
 end
-
 
 """
     is_valid(map_value::Real)
