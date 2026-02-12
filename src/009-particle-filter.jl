@@ -5,6 +5,8 @@ using JLD2
 using LogExpFunctions: logsumexp
 using Random
 
+import NaturalSort
+
 export particle_filter
 
 
@@ -182,7 +184,7 @@ function _particle_filter(
     timesteps_by_batch = split_indices(timesteps, nb)
     if direction == "forward"
         if do_batch
-            batch = sort(batch)
+            batch = sort(batch, lt = NaturalSort.natural)
         end 
     elseif direction == "backward"
         # a) Update timesteps_by_batch
@@ -194,7 +196,7 @@ function _particle_filter(
         start = nt; finish = 1;
         timesteps = collect(start:-1:finish)
         if do_batch
-            batch = sort(batch, rev = true)
+            batch = sort(batch, rev = true, lt = NaturalSort.natural)
         end 
     else
         error("`direction` must be \"forward\" or \"backward\".")

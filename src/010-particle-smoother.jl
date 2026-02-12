@@ -2,6 +2,8 @@ using Base.Threads: @threads
 using JLD2
 using ProgressMeter
 
+import NaturalSort
+
 export particle_smoother_two_filter
 
 
@@ -244,6 +246,7 @@ function particle_smoother_two_filter(; timeline::Vector{DateTime},
         # Update number of batches and do_batch 
         nb         = length(xfwd_batch)
         do_batch   = true
+        batch = sort(batch, lt = NaturalSort.natural)
     else
         isnothing(batch) || error("`batch` is only implemented if inputs are batched.")
     end 

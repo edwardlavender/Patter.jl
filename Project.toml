@@ -1,7 +1,7 @@
 name = "Patter"
 uuid = "faabfbac-af09-47ee-bc95-5e336c516b5a"
-authors = ["edwardlavender <edward.lavender@eawag.ch>"]
 version = "2.0.0"
+authors = ["edwardlavender <edward.lavender@eawag.ch>"]
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
@@ -15,8 +15,28 @@ GeoArrays = "2fb1d81b-e6a0-5fc5-82e6-8e06903437ab"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LibGEOS = "a90b1aa1-3769-5649-ba7e-abc5a9d163eb"
 LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
+NaturalSort = "c020b1a1-e9b0-503a-9c33-f039bfc54a85"
 OrderedCollections = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Rasters = "a3a2b9e3-a471-40c9-b274-f788e487c689"
 Tables = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
+
+[compat]
+ArchGDAL = "0.10.11"
+Crayons = "4.1.1"
+DataFrames = "1.8.1"
+DataFramesMeta = "0.15.6"
+Dates = "1.11.0"
+DimensionalData = "0.29.26"
+Distributions = "0.25.123"
+GeoArrays = "0.9.5"
+JLD2 = "0.6.3"
+LibGEOS = "0.9.7"
+LogExpFunctions = "0.3.29"
+NaturalSort = "1.0.0"
+OrderedCollections = "1.8.1"
+ProgressMeter = "1.11.0"
+Random = "1.11.0"
+Rasters = "0.14.7"
+Tables = "1.12.1"
