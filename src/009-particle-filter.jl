@@ -159,7 +159,6 @@ function _particle_filter(
     nt = length(timeline)
     # Number of particles
     np = length(xinit)
-    log_np = log(np)
     # Number of recorded particles
     nr = n_record
     # Use t_resample
@@ -209,12 +208,12 @@ function _particle_filter(
     xout  = Matrix{eltype(xinit)}(undef, nr, length(timesteps_by_batch[1])) 
     # (log) weights
     lw = zeros(np)
+    # Normalisation constants
+    lz = zeros(nt)
     # Output ESS vector
     ess = fill(NaN, nt)
     # Output maxlp vector
     maxlp = fill(NaN, nt)
-    # loglik 
-    loglik = 0.0
 
     #### Run filter
     for b in 1:nb
@@ -231,39 +230,39 @@ function _particle_filter(
             indices_for_batch = reverse(indices_for_batch)
         end 
 
-        # Run filter
+        # Run filter from 1, ..., T
         pb = Progress(length(timesteps_for_batch); progress...)
         for (i, t) in zip(indices_for_batch, timesteps_for_batch)
 
             # println(t)
 
+            #### Initialisation
+            # Initialise log probability vector f(y_t | s_{t, i})
+            lp = zeros(np)
+            # Initalise vector for weights from previous time step f(s_{t, i} | y_{1:t-1}) after move (below)
+            lwp = copy(lw)
+
             #### Move particles & compute weights
-            # * We iterate once over particles b/c this is thread safe
+            # * We iterate once over particles b/c this is thread safe 
             timestamp            = timeline[t]
             has_obs_at_timestamp = haskey(yobs, timestamp)
             @threads for j in 1:np
                 if isfinite(lw[j])
-                    # Move particles
+                    # Move particles, updating lwp and lw
                     if t != start
                         xnow[j], lwi = simulate_move(xpast[j], model_move, t, n_move)
                         lw[j] += lwi
                     end
-                    # Evaluate likelihoods
+                    lwp[j] = lw[j]
+                    # Evaluate likelihoods (compute log prob and update weights)
                     if has_obs_at_timestamp && isfinite(lw[j])
                         for (obs, model) in yobs[timestamp]
-                            lw[j] += logpdf_obs(xnow[j], model, t, obs)
+                            lp[j] += logpdf_obs(xnow[j], model, t, obs)
                         end
+                    lw[j] += lp[j]
                     end
                 end
             end
-
-            #### Record diagnostics
-            # Maxmimum log posterior
-            maxlp[t] = maximum(lw)
-            # Update log likelihood
-            # loglik is sum of the logs of the average unnormalised weight at each time step
-            # i.e., loglik = sum over all T: log(sum(w) / N)
-            loglik += logsumexp(lw) - log_np
 
             #### Validate weights
             if !any(isfinite.(lw))
@@ -284,6 +283,12 @@ function _particle_filter(
                 end 
                 return (timeline = timeline[pos], states = xout, ess = ess[pos], maxlp = maxlp[pos], loglik = -Inf, convergence = false)
             end
+
+            #### Compute log normalisation constant
+            # Z(y_{1:t}) = sum(f(y_t | s_{t, i}) * wp) / sum(wp)
+            # Note that lwp are weights for the previous time step but after the current move
+            lz[t] = logsumexp(lp .+ lwp) - logsumexp(lwp)
+            maxlp[t] = maximum(lw)
 
             #### Resample particles
             # Normalise weights
@@ -320,6 +325,9 @@ function _particle_filter(
         end 
 
     end 
+
+    # Compute log likelihood
+    loglik = sum(lz)
 
     return (timeline = timeline, states = xout, ess = ess, maxlp = maxlp, loglik = loglik, convergence = true)
 
